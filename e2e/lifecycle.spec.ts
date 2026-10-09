@@ -29,6 +29,9 @@ test("full booking lifecycle across every role", async ({ browser, baseURL }) =>
   const waitFor = (id: string, s: string) => expect.poll(() => status(id), { timeout: 60_000 }).toBe(s);
 
   const pos = (p: Page, id: string) => p.goto(`/pos/${L}/bookings/${id}`);
+  /** This booking's row in a role's "Next up" queue, named by the action it needs. */
+  const nextUp = (p: Page, action: string) =>
+    p.getByRole("link").filter({ hasText: `LEA-${run.slice(-4)}` }).filter({ hasText: action }).first();
   const stock = async (sku: string) =>
     ((await (await partsApi.get(`/api/shops/${L}/inventory`)).json()).items as { id: string; sku: string; qtyOnHand: number }[]).find(
       (i) => i.sku === sku,
@@ -92,7 +95,7 @@ test("full booking lifecycle across every role", async ({ browser, baseURL }) =>
   // --- 2. Advisor confirms and assigns the technician ---------------------------
   await test.step("advisor sees it, confirms and assigns Imran", async () => {
     await advisor.page.goto(`/pos/${L}`);
-    await expect(advisor.page.getByText("New bookings")).toBeVisible();
+    await expect(nextUp(advisor.page, "Confirm the booking")).toBeVisible();
     await pos(advisor.page, bookingId);
     await advisor.page.getByRole("combobox").first().selectOption({ label: "Imran Malik" });
     await advisor.page.getByRole("button", { name: "Confirm & assign" }).click();
@@ -102,7 +105,7 @@ test("full booking lifecycle across every role", async ({ browser, baseURL }) =>
   // --- 3. Technician inspects and builds the estimate ---------------------------
   await test.step("technician inspects and submits an itemised estimate", async () => {
     await tech.page.goto(`/pos/${L}`);
-    await expect(tech.page.getByText("To inspect")).toBeVisible();
+    await expect(nextUp(tech.page, "Start the inspection")).toBeVisible();
     await pos(tech.page, bookingId);
     await tech.page.getByRole("button", { name: "Start inspection" }).click();
     await waitFor(bookingId, "INSPECTING");
@@ -167,7 +170,7 @@ test("full booking lifecycle across every role", async ({ browser, baseURL }) =>
     await waitFor(bookingId, "PARTS_PENDING");
 
     await parts.page.goto(`/pos/${L}`);
-    await expect(parts.page.getByText("Check stock")).toBeVisible();
+    await expect(nextUp(parts.page, "Check stock")).toBeVisible();
     await pos(parts.page, bookingId);
     await expect(parts.page.getByText("Short 2")).toBeVisible();
     await parts.page.getByPlaceholder(/Supplier/).fill("Honda Parts Lahore");
@@ -300,8 +303,8 @@ test("full booking lifecycle across every role", async ({ browser, baseURL }) =>
 
     const owner = await pageAs(browser, "owner");
     await owner.page.goto(`/pos/${L}`);
-    await expect(owner.page.getByText("Revenue")).toBeVisible();
-    await expect(owner.page.getByText("Avg turnaround")).toBeVisible();
+    await expect(owner.page.getByText("Revenue collected")).toBeVisible();
+    await expect(owner.page.getByText("Average turnaround")).toBeVisible();
     await owner.close();
   });
 

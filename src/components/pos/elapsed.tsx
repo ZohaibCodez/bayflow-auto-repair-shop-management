@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatElapsed } from "@/lib/time";
+import { formatDateTime, formatElapsed } from "@/lib/time";
 
 /**
  * How long a job has sat where it is, kept honest without a hydration mismatch:
@@ -21,7 +21,9 @@ export function Elapsed({ since, initial }: { since: string; initial: string }) 
   }, [since]);
 
   return (
-    <time dateTime={since} title={new Date(since).toLocaleString()}>
+    // Fixed locale + shop time zone: `toLocaleString()` differed between the server and
+    // the visitor's browser, which broke hydration on every POS overview.
+    <time dateTime={since} title={formatDateTime(new Date(since))}>
       {label}
     </time>
   );
