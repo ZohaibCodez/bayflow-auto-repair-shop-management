@@ -11,8 +11,8 @@
 **Status legend:** `☐ Todo` · `◐ Doing` · `☑ Done` · `⊘ Blocked`
 **Owners:** `Z` Zohaib · `T` Teammate · `AI` Claude · `—` unassigned
 
-**Current focus:** ▶ **Phase 1 — brand/design system + cinematic landing (real shop data) + auth UI shipped. Next: RBAC guards, role routing, owner shop/team management.**
-**Last updated:** 2026-10-09 (by AI) — design system, landing page, login + owner signup; build green. (Env now lives in `.env`, not `.env.local`.)
+**Current focus:** ▶ **Core product is complete and tested (unit + Playwright E2E). Next: deploy to Vercel (P0-5/6), delete the 3 duplicate shops from the old seed, then the bonus track (P7).**
+**Last updated:** 2026-10-09 (by AI)
 
 ---
 
@@ -20,14 +20,14 @@
 
 | Phase | Theme | Tasks done | Status |
 |---|---|---|---|
-| 0 | Foundation & first deploy | 5 / 6 | ▶ DB live + seeded; Vercel/GitHub deploy (P0-5/6) left |
-| 1 | Auth & multi-tenancy | 1 / 5 | ◐ design system + auth UI done; RBAC/shop mgmt next |
-| 2 | Public portal & booking creation | ~1 / 4 | ◐ landing + shop directory live |
-| 3 | State machine end-to-end | 0 / 5 | ☐ |
-| 4 | Inventory & procurement | 0 / 3 | ☐ |
-| 5 | QC loop, notifications, dashboards | 0 / 4 | ☐ |
-| 6 | Seed, docs, hardening, deploy | 0 / 5 | ☐ |
-| 7 | Bonus (calling / AI Front Desk) | 0 / 4 | 🔒 locked until core green |
+| 0 | Foundation & first deploy | 4 / 6 | ⊘ only the Vercel + GitHub deploy left (needs Zohaib's accounts) |
+| 1 | Auth & multi-tenancy | 6 / 6 | ☑ |
+| 2 | Public portal & booking creation | 4 / 4 | ☑ |
+| 3 | State machine end-to-end | 5 / 5 | ☑ |
+| 4 | Inventory & procurement | 3 / 3 | ☑ |
+| 5 | QC loop, notifications, dashboards | 4 / 4 | ☑ |
+| 6 | Seed, docs, hardening, deploy | 4 / 5 | ◐ final live deploy + smoke test left |
+| 7 | Bonus (calling / AI Front Desk) | 0 / 4 | ☐ unlocked — core is green |
 
 ---
 
@@ -35,99 +35,92 @@
 
 | ID | Task | Owner | Status | Notes |
 |---|---|---|---|---|
-| P0-1 | Scaffold Next 16 app + Tailwind 4 + ESLint | AI | ☑ | Next 16.4.0, React 19.3, TS, App Router, Turbopack, src/, `@/*` |
-| P0-2 | Init shadcn/ui + base components | AI | ☑ | base-nova style; button/input/label/card/badge/table/dialog/dropdown/select/sonner/separator/tabs |
-| P0-3 | Prisma schema + client + `db.ts` singleton + seed | AI | ☑ | full data model; **Prisma pinned to 6.19.3** (v7 dropped `url` from schema). ✓ migrated + seeded to **Neon** (3 shops, 14 users, 168 slots). Env uses `.env` (Prisma reads it; Next too) |
-| P0-4 | Auth.js v5 skeleton (credentials + JWT) + login shell | AI | ☑ | `src/lib/auth.ts`, `/api/auth/[...]`, `/login`, type augmentation |
-| P0-5 | **Deploy to Vercel → live URL** | Z | ⊘ | needs Zohaib's Vercel + Neon accounts (see handoff) |
-| P0-6 | Public GitHub repo + Vercel auto-deploy on push | Z | ⊘ | gh CLI not installed — create repo on github.com |
-
-**Done when:** live URL loads, DB connects, one test user can log in.
-**⚠ Note:** `next build` passes; **Neon DB is live + seeded**. Only remaining P0 item is the Vercel/GitHub deploy (P0-5/6), which needs Zohaib's accounts.
+| P0-1 | Scaffold Next 16 app + Tailwind 4 + ESLint | AI | ☑ | Next 16.4, React 19.3, TS strict, App Router, `src/`, `@/*` |
+| P0-2 | Init shadcn/ui + base components | AI | ☑ | base-nova (Base UI); + textarea, native-select |
+| P0-3 | Prisma schema + client + `db.ts` + seed | AI | ☑ | Prisma pinned 6.19.3; Neon migrated (2 migrations) + seeded |
+| P0-4 | Auth.js v5 (credentials + JWT) + login | AI | ☑ | session lifetime from `AUTH_SESSION_DAYS`; emails case-insensitive |
+| P0-5 | **Deploy to Vercel → live URL** | Z | ⊘ | needs Zohaib's Vercel account — see README "Deployment" (set function region = Neon region) |
+| P0-6 | Public GitHub repo + auto-deploy on push | Z | ⊘ | Zohaib pushes (Claude commits locally only) |
 
 ## Phase 1 — Auth & multi-tenancy  (Z lead)
 
 | ID | Task | Owner | Status | Notes |
 |---|---|---|---|---|
-| P1-1 | User model + owner signup + login (customer + staff login) | AI | ◐ | login works for all roles (credentials+JWT); owner signup built (`/signup`); polished auth UI. **Remaining:** post-login role-based routing |
-| P1-0 | Brand + design system (theme, Archivo display font, motion, shadcn) | AI | ☑ | graphite + signal-amber, dark-first; `motion` installed; globals.css tokens |
-| P1-2 | `Membership` model + `rbac.ts` (`requireRole`, `scopeToShop`) | — | ☐ | role per shop |
-| P1-3 | Owner: create shop; add/edit/deactivate team members | — | ☐ | |
-| P1-4 | Owner: multiple shops + shop switcher; service catalog CRUD | — | ☐ | |
-| P1-5 | **Tenant isolation test**: Shop-A token ⇒ 403/404 on Shop-B | — | ☐ | graded (10%) |
-
-**Done when:** Shop-A staff cannot touch Shop-B data; owner runs 2 shops with separate teams.
+| P1-0 | Brand + design system | AI | ☑ | graphite + signal-amber; **light + dark** palettes, one-click toggle (follows OS until clicked, persisted) |
+| P1-1 | Owner signup + login (customer + staff) + role routing | AI | ☑ | `/dashboard` routes staff → POS, customers → account; `proxy.ts` keeps deep links |
+| P1-2 | Membership + `rbac.ts` | AI | ☑ | `requireShopAccess`, `requireBookingAccess`, `canViewBooking`; techs see only assigned jobs |
+| P1-3 | Owner: create shop; add/edit/deactivate team | AI | ☑ | `/pos/new`, `/pos/[shop]/team` (temp password; reuses existing accounts) |
+| P1-4 | Multiple shops + switcher; service catalogue CRUD | AI | ☑ | switcher in sidebar; `/pos/[shop]/services`, `/settings` (hours, slot length, bays) |
+| P1-5 | **Tenant isolation test**: Shop-A ⇒ 403/404 on Shop-B | AI | ☑ | `e2e/security.spec.ts` |
 
 ## Phase 2 — Public portal & booking creation  (T lead)
 
 | ID | Task | Owner | Status | Notes |
 |---|---|---|---|---|
-| P2-1 | Landing page: hero + shop grid (name, city, services) + search/city filter | AI | ◐ | cinematic hero w/ animated pipeline instrument, shop directory from live DB, lifecycle section, responsive. **Remaining:** search/city filter, rating |
-| P2-2 | Booking wizard: shop → services/problems → slot → details → review | — | ☐ | multi-select + free text |
-| P2-3 | Slot picker shows only available slots; capacity enforced (txn/unique) | — | ☐ | no double-booking |
-| P2-4 | Create booking `PENDING`; create/reuse customer account | — | ☐ | |
-
-**Done when:** a visitor books on the live URL and it appears on the SA dashboard.
+| P2-1 | Landing + shop grid + search/city filter | AI | ☑ | ratings, descriptions, next opening from working hours |
+| P2-2 | Booking wizard | AI | ☑ | services → live slots → details/vehicle → review; animated; sticky summary |
+| P2-3 | Only available slots; capacity enforced | AI | ☑ | slots from working hours (shop time); atomic claim — tested with concurrent bookings |
+| P2-4 | Create `PENDING`; create/reuse customer account | AI | ☑ | signs the new customer in; wrong password for an existing email → clear error |
 
 ## Phase 3 — State machine end-to-end  (Z + T)
 
 | ID | Task | Owner | Status | Notes |
 |---|---|---|---|---|
-| P3-1 | `stateMachine.ts` (statuses, transitions, owning role) | — | ☐ | single source of truth |
-| P3-2 | `transition()` with role guards + BookingEvent audit log | — | ☐ | reject invalid transitions |
-| P3-3 | Estimate (items, labor, revision) + SA edit + send to customer | — | ☐ | |
-| P3-4 | Customer approve/reject; reject → revise or cancel path | — | ☐ | |
-| P3-5 | SA dashboard + Technician dashboard (inspect/estimate/repair/sendQC) | — | ☐ | |
-
-**Done when:** customer→COMPLETED runs live; estimate-reject path works; invalid transitions blocked.
+| P3-1 | `state-machine.ts` | AI | ☑ | 21 actions, party-based guards, 34 Vitest tests |
+| P3-2 | `transition()` + audit log | AI | ☑ | compare-and-set status update + BookingEvent in the same transaction |
+| P3-3 | Estimate + SA edit + send | AI | ☑ | parts from inventory, live totals, revision bumps on SA edits |
+| P3-4 | Customer approve/reject; revise or cancel | AI | ☑ | rejected version + reason kept; return-to-technician option |
+| P3-5 | Role dashboards | AI | ☑ | advisor lanes, technician bay, parts desk, QC queue, owner overview, job page action panel |
 
 ## Phase 4 — Inventory & procurement  (Z lead)
 
 | ID | Task | Owner | Status | Notes |
 |---|---|---|---|---|
-| P4-1 | Inventory table (SKU, qty, reorder, cost); required-vs-available view | — | ☐ | |
-| P4-2 | Purchase orders: create / receive (stock +) / partial delivery | — | ☐ | ORDERED/PARTIAL/RECEIVED |
-| P4-3 | Allocate to booking (stock −); cancel before IN_REPAIR releases parts | — | ☐ | |
-
-**Done when:** worked-example parts flow works and stock counts are correct.
+| P4-1 | Inventory table + required-vs-available | AI | ☑ | on shelf / reserved / on order / reorder; stock ledger |
+| P4-2 | Purchase orders: create / receive / partial | AI | ☑ | booking POs + restock POs; partial delivery keeps `PARTS_ORDERED` |
+| P4-3 | Allocate; cancel releases parts | AI | ☑ | tested: stock returns exactly on cancel |
 
 ## Phase 5 — QC loop, notifications, dashboards  (Z + T)
 
 | ID | Task | Owner | Status | Notes |
 |---|---|---|---|---|
-| P5-1 | QC queue with first-to-pick lock (`qcInspectorId`) | — | ☐ | two can't pick same job |
-| P5-2 | QC pass → READY_FOR_PICKUP; fail → Issue + loop to tech | — | ☐ | graded path |
-| P5-3 | Notification bell + unread count + SWR polling | — | ☐ | min events per brief §5.4 |
-| P5-4 | Parts & QC dashboards; Owner overview + per-shop summary | — | ☐ | role-scoped views only |
-
-**Done when:** QC-fail loop works live; every role sees only their work; bell updates.
+| P5-1 | QC queue with first-to-pick lock | AI | ☑ | tested with two inspectors claiming at once |
+| P5-2 | Pass → ready; fail → Issue + loop | AI | ☑ | QC checklist; issue shown to the technician |
+| P5-3 | Notification bell + unread + polling | AI | ☑ | all brief §5.4 events + more; click-through links |
+| P5-4 | Parts & QC dashboards; owner overview | AI | ☑ | owner: stats, bookings by stage, team, inventory, QC pass rate |
 
 ## Phase 6 — Seed, docs, hardening, final deploy  (both)
 
 | ID | Task | Owner | Status | Notes |
 |---|---|---|---|---|
-| P6-1 | `seed.ts`: ≥3 shops, full team per role, services, inventory, slots, demo customer+booking | — | ☐ | judges test instantly |
-| P6-2 | README complete (prereqs, install, env, migrate+seed, run, **demo accounts**, architecture) | — | ☐ | |
-| P6-3 | Vitest for state machine (invalid transitions rejected) | — | ☐ | architecture score |
-| P6-4 | Playwright happy-path (booking → COMPLETED) + tenant-isolation test | — | ☐ | |
-| P6-5 | Final deploy + smoke-test full flow on live URL | — | ☐ | Definition of Done in PLAN.md |
+| P6-1 | Seed: ≥3 shops, teams, services, inventory, demo bookings | AI | ☑ | 5 shops / 2 owners; 5 Lahore bookings at different stages; idempotent "reset demo" |
+| P6-2 | README complete | AI | ☑ | prereqs, env table, db, run, tests, demo accounts, walkthrough, architecture, API, deploy |
+| P6-3 | Vitest for the state machine | AI | ☑ | `pnpm test` |
+| P6-4 | Playwright: lifecycle + tenant isolation + more | AI | ☑ | `pnpm test:e2e` (installed Chrome) — lifecycle, security, owner, public specs |
+| P6-5 | Final deploy + smoke test on live URL | Z | ☐ | `E2E_BASE_URL=<live> pnpm test:e2e` |
 
-**Done when:** a stranger runs it from the README; Definition of Done all green on live URL.
-
-## Phase 7 — BONUS 🔒  (only after core is green)
+## Phase 7 — BONUS  (core is green — unlocked)
 
 | ID | Task | Owner | Status | Notes |
 |---|---|---|---|---|
-| P7-1 | In-app calling (WebRTC/Twilio) SA ↔ customer + call log | — | ☐ | |
-| P7-2 | AI Front Desk: Claude tool-calling over caller's own bookings | — | ☐ | guardrailed to own data |
-| P7-3 | AI call summary + SA task (mark done) | — | ☐ | |
-| P7-4 | Stretch: owner analytics / invoice PDF / SSE live updates | — | ☐ | |
+| P7-1 | In-app calling SA ↔ customer + call log | — | ☐ | LiveKit recommended; `CallLog` model ready |
+| P7-2 | AI Front Desk: Claude tool calling over caller's own bookings | — | ☐ | narrow tools; guardrailed |
+| P7-3 | AI call summary + SA task (mark done) | — | ☐ | `AiTask` model ready |
+| P7-4 | Stretch: invoice PDF / SSE live updates / analytics | — | ☐ | |
+
+## Housekeeping
+
+| ID | Task | Owner | Status | Notes |
+|---|---|---|---|---|
+| H-1 | Delete the 3 duplicate shops from the old (non-idempotent) seed | Z | ☐ | they have no bookings; see the command in the session notes / ask Claude |
+| H-2 | Rotate the Neon password + `AUTH_SECRET` before the repo goes public | Z | ☐ | they were shared in chat and sit in `docs/Requirement.txt` (now git-ignored) |
 
 ---
 
 ## Activity Log  (newest first — append dated lines here for the record)
 
-- **2026-10-09 (AI):** Shipped the brand + first UI. Design system ("service bay, instrumented": graphite + signal-amber, dark-first, Archivo expanded display font, `motion` for animation) in `globals.css`/`layout.tsx`. Built: cinematic **landing page** (`/`) with an animated repair-pipeline hero + shop directory from live DB + lifecycle timeline + owner CTA; polished **login** (`/login`, demo-account quick-fill) and **owner signup** (`/signup`, server action). `/book/[shopId]` placeholder. Switched off Next 16 `cacheComponents` for predictable dynamic rendering. `pnpm build` green (routes: /, /login, /signup, /book/[shopId], /api/auth). Not committed (user commits). ▶ Next: RBAC (`rbac.ts`), role-based post-login routing, owner shop/team management, then role dashboards.
-- **2026-10-09 (AI):** Neon connected. Standardized env on `.env` (Prisma CLI reads `.env`, not `.env.local`). Ran `prisma migrate dev --name init` → tables created on Neon; `db:seed` → 3 shops / 14 users / 12 memberships / 12 services / 168 slots / 12 inventory / 1 vehicle. Verified via live count query. Demo password `password123`. ▶ Next: Phase 1, and Zohaib to do Vercel+GitHub (P0-5/6).
-- **2026-10-09 (AI):** Phase 0 code done — scaffolded Next 16.4 app (TS/Tailwind4/App Router/src), full Prisma schema + client + `db.ts` + idempotent `seed.ts` (3 shops, teams, inventory, slots, demo customer), Auth.js v5 credentials skeleton + `/login`, shadcn/ui (12 components). Pinned Prisma to 6.19.3 (v7 removed `url` from schema). `pnpm build` passes. ▶ Next (Zohaib): create Neon DB + Vercel project for P0-5/P0-6, then Phase 1.
-- **2026-10-09 (AI):** Repo cleaned (CTF track removed, brief → `docs/`), `.gitignore` added, stack locked (`STACK.md`), build plan written (`PLAN.md`), this tracker created. ▶ Next: P0-1 scaffold.
+- **2026-10-09 (AI):** Core product built and tested. State machine (21 actions, party guards) + RBAC/tenant isolation + workflow services (transactions, compare-and-set, audit log, stock ledger); schema migration `workflow_core`; idempotent seed driving demo bookings through the real services. UI: POS shell (switcher, role nav, bell), role overviews, job page with role-aware action panel + estimate editor, bookings list, QC queue, inventory, POs, team, services, settings, create shop; customer wizard + portal; light/dark toggle; landing search/filter. REST API with 401/403/404/409/422. Tests: Vitest 34 + Playwright (Chrome) lifecycle/security/owner/public — found and fixed a concurrent first-booking slot race (500 → 409), a wizard default-day issue and lost deep links after login. ▶ Next: deploy (P0-5/6), H-1/H-2, bonus.
+- **2026-10-09 (AI):** Shipped the brand + first UI: design system, cinematic landing with live shop directory, login + owner signup. `pnpm build` green.
+- **2026-10-09 (AI):** Neon connected, migrated and seeded. Demo password `password123`.
+- **2026-10-09 (AI):** Phase 0 code done — Next 16.4 scaffold, Prisma schema, Auth.js v5, shadcn/ui.
+- **2026-10-09 (AI):** Repo cleaned, `.gitignore`, stack locked (`STACK.md`), plan (`PLAN.md`), this tracker.

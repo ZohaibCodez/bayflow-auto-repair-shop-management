@@ -1,49 +1,223 @@
 # BayFlow 🔧
 
-> Multi-tenant management platform for independent auto repair shops — customer booking portal, role-based shop POS, and a backend booking state machine. Built for **LoopVerse 3.0 — Web Dev (Virtual)**.
+> Multi-tenant management platform for independent auto repair shops — a customer booking portal, a role-based shop POS, and a backend booking **state machine**. Built for **LoopVerse 3.0 — Web Dev (Virtual)**.
 
-**Live URL:** _coming in Phase 0_ · **Status:** 🚧 in development
+**Live URL:** _added after the first Vercel deploy_ · **Status:** core lifecycle complete and tested end-to-end
 
 ---
 
 ## What it does
 
-- **Customers** discover a shop, book a service, track their vehicle through every repair step, and approve estimates online.
-- **Shop staff** (Service Advisor, Technician, Parts, QC, Owner) each get a role-scoped dashboard and move a job through a strict booking lifecycle.
-- **Owners** run multiple shops, each with its own team, services, inventory and bookings — fully isolated.
+- **Customers** find a shop (search + city filter), book in a 4-step wizard that only offers genuinely free slots, then follow the car through every stage, approve or decline an itemised estimate, and confirm pick-up.
+- **Shop staff** — Service Advisor, Technician, Parts Person, QC Inspector — each get a dashboard that shows only their own work, and can only perform their own steps.
+- **Owners** run several shops, each with its own team, services, slots and inventory, and switch between them in one click.
+- **Every step is accountable**: each status change is written to an audit log (who, role, when, from → to, note), and the people involved are notified in-app.
 
 ## Tech stack
 
-Next.js 16 (App Router) · TypeScript · Prisma + PostgreSQL (Neon) · Auth.js v5 · Tailwind CSS + shadcn/ui · Zod · deployed on Vercel. Full rationale in **[STACK.md](STACK.md)**.
-
-## Project docs
-
-- **[STACK.md](STACK.md)** — the locked tech stack and the hard rules.
-- **[PLAN.md](PLAN.md)** — architecture, data model, the booking state machine, phases & sprints, and the work split.
-- **[TRACKER.md](TRACKER.md)** — the live task board (who's doing what, by phase). Both devs update it; git history is the record.
-
-## Getting started (filled out during the build)
-
-**Windows quick start:** double-click **`run.bat`** (or run it in a terminal). It installs deps, creates `.env` from the example, generates the Prisma client, optionally migrates + seeds, and starts the dev server.
-
-Manual steps (any OS):
-```bash
-# Prerequisites: Node 22+, pnpm 10+, a Neon Postgres DB
-pnpm install
-cp .env.example .env      # then fill in DATABASE_URL, DIRECT_URL, AUTH_SECRET
-pnpm db:migrate                  # create tables
-pnpm db:seed                     # load demo shops, teams, inventory, slots
-pnpm dev                         # http://localhost:3000
-```
-
-## Demo accounts
-
-_Listed here once the seed script lands (Phase 6) — one account per role._
-
-## Architecture & design decisions
-
-See **[PLAN.md](PLAN.md)**. In short: one Next.js app serving three surfaces (public portal, customer area, shop POS) over one backend; an explicit booking **state machine** as the single source of truth; server-side **tenant isolation** on every query.
+Next.js 16 (App Router, Server Actions, Route Handlers) · React 19 · TypeScript (strict) · PostgreSQL on Neon · Prisma 6 · Auth.js v5 (credentials + JWT) · Tailwind CSS 4 + shadcn/ui (Base UI) · Zod 4 · SWR · Vitest · Playwright (Chrome). Deployed on Vercel. Rationale in **[STACK.md](STACK.md)**.
 
 ---
 
-_This README grows with the project. The Definition of Done lives in [PLAN.md](PLAN.md)._
+## Quick start
+
+### Prerequisites
+
+| Tool | Version |
+|---|---|
+| Node.js | **22 LTS** (20.9+ works) |
+| pnpm | **10+** (`npm i -g pnpm`) |
+| PostgreSQL | **15+** — a free [Neon](https://neon.tech) database, or a local Postgres |
+| Google Chrome | any recent version (only for the E2E tests) |
+
+### 1. Install
+
+```bash
+pnpm install          # also runs `prisma generate`
+```
+
+### 2. Configure
+
+```bash
+cp .env.example .env
+```
+
+| Variable | What it is |
+|---|---|
+| `DATABASE_URL` | Pooled Postgres connection string (Neon: the `-pooler` host). Used at runtime. |
+| `DIRECT_URL` | Direct (non-pooled) connection string. Used by migrations and the seed. Same as `DATABASE_URL` for a local Postgres. |
+| `AUTH_SECRET` | Signs session tokens. Generate with `npx auth secret`. |
+| `AUTH_SESSION_DAYS` | Sign-in lifetime in days (default 7). |
+| `NEXT_PUBLIC_APP_URL` | Base URL of the app. |
+| everything else | Optional / bonus — leave blank. Each variable is commented in `.env.example`. |
+
+### 3. Database
+
+```bash
+pnpm db:deploy        # apply migrations (use `pnpm db:migrate` while developing the schema)
+pnpm db:seed          # demo shops, teams, services, inventory and demo bookings
+```
+
+`pnpm db:seed` is **idempotent and doubles as "reset demo"**: it upserts the demo shops/users/services/inventory and re-creates the demo bookings of the seeded shops. Shops that users created themselves are never touched.
+
+### 4. Run
+
+```bash
+pnpm dev              # http://localhost:3000
+```
+
+Windows: double-click **`run.bat`** — it installs, creates `.env`, generates the client, optionally migrates + seeds, and starts the dev server.
+
+### 5. Test
+
+```bash
+pnpm test             # unit tests (Vitest): state machine + slot/time logic
+pnpm db:seed          # fresh demo data for the E2E run
+pnpm test:e2e         # end-to-end (Playwright, uses your installed Chrome); starts `pnpm dev` if needed
+pnpm test:e2e:ui      # same, in Playwright's UI mode
+E2E_BASE_URL=https://<live-url> pnpm test:e2e   # run the suite against a deployment
+```
+
+Other scripts: `pnpm lint`, `pnpm typecheck`, `pnpm format`, `pnpm db:studio`.
+
+---
+
+## Demo accounts
+
+All demo accounts use the password **`password123`**. The login page has one-click buttons to fill each of them.
+
+| Role | Email | Notes |
+|---|---|---|
+| Owner | `owner@bayflow.test` | Fatima — owns Lahore, Karachi and Islamabad shops (try the shop switcher) |
+| Owner #2 | `owner2@bayflow.test` | Hamza — owns Rawalpindi and Faisalabad (can't see Fatima's shops) |
+| Service Advisor | `sa.lahore@bayflow.test` | Bilal |
+| Technician | `tech.lahore@bayflow.test` | Imran |
+| Parts Person | `parts.lahore@bayflow.test` | Usman |
+| QC Inspector | `qc.lahore@bayflow.test` | Sara (a second inspector: `qc2.lahore@bayflow.test`) |
+| Customer | `customer@bayflow.test` | Ahmed — has an estimate waiting for approval |
+| Customer | `sana@bayflow.test`, `ali@bayflow.test` | more demo customers |
+
+Every shop has a full team: `sa.<shop>`, `tech.<shop>`, `qc.<shop>`, `parts.<shop>` `@bayflow.test`, where `<shop>` is `lahore`, `karachi`, `isb`, `pindi` or `fsd`.
+
+### What's waiting in the demo data (Lahore Auto Care)
+
+| Booking | Status | Try it as |
+|---|---|---|
+| Ahmed's 2016 Honda Civic — the brief's worked example | Estimate **awaiting customer** (PKR 16,100, ignition coil out of stock) | Customer → approve → then Advisor, Parts (order coil, receive, allocate), Tech, QC… |
+| Sana's Toyota Corolla | **Pending** | Advisor → confirm & assign |
+| Ali's Honda City | **Assigned** | Technician → start inspection, build an estimate |
+| Sana's Suzuki Swift | **QC pending** | QC → pick, then fail it (issue) or pass it |
+| Ali's Kia Sportage | **Ready for pick-up** | Advisor → notify / complete, or Customer → "I've collected my car" |
+
+## A 3-minute judge walkthrough
+
+1. **Customer** — open the landing page, pick a shop, book through the wizard (a new email creates the account; a known email + password reuses it).
+2. **Advisor** (`sa.lahore`) — the booking is in *New bookings*: confirm and assign Imran in one step.
+3. **Technician** (`tech.lahore`) — *To inspect*: start the inspection and add parts (from inventory, out-of-stock is flagged) and labour → submit.
+4. **Advisor** — review and adjust a line (counts a revision) → send to customer.
+5. **Customer** — the banner says *Estimate awaiting your approval* → decline it once; the advisor revises and resends; approve.
+6. **Advisor** — hand to parts. **Parts** (`parts.lahore`) — reserve what's on the shelf, order what's missing, confirm a partial then full delivery, allocate.
+7. **Technician** — send to QC. **QC** (`qc.lahore`) — pick the job (locks it), fail it with an issue → it returns to the technician → resubmit → pass.
+8. **Advisor** — notify the customer; **Customer** confirms pick-up → **COMPLETED**. The audit log on the job page shows every step.
+9. **Isolation** — sign in as `sa.karachi@bayflow.test` and request a Lahore booking: `GET /api/shops/<lahoreShopId>/bookings` → **403**.
+
+---
+
+## Architecture
+
+```
+            ┌──────────────────────── Next.js 16 (one app, one deploy) ────────────────────────┐
+ Browser ──►│  Public portal          Customer portal          Shop POS (role dashboards)       │
+            │  /  /book/[shop]        /account/…               /pos/[shopId]/…                   │
+            │        │                       │                          │                        │
+            │        └──── Server Actions ───┴──── Route Handlers (/api/…, JSON) ───┘            │
+            │                              │                                                     │
+            │   lib/rbac.ts  ── tenant isolation + booking visibility (every request)            │
+            │   lib/booking/state-machine.ts ── statuses, transitions, role guards (pure, tested) │
+            │   server/services/* ── workflow, bookings, parts, shops (one DB transaction each)   │
+            └──────────────────────────────────┬──────────────────────────────────────────────┘
+                                               │ Prisma
+                                     PostgreSQL (Neon) — shop-scoped rows, audit log, stock ledger
+```
+
+### Project structure
+
+```
+src/
+  app/
+    page.tsx                     landing + shop directory
+    book/[shopId]/               booking wizard
+    account/                     customer dashboard + booking page
+    pos/[shopId]/                POS: overview, bookings, job page, qc, inventory,
+                                 purchase-orders, team, services, settings
+    pos/new/                     create a shop
+    api/                         REST endpoints (see below)
+  lib/
+    booking/state-machine.ts     ★ single source of truth for the lifecycle
+    rbac.ts                      ★ tenant isolation + access rules
+    slots.ts, time.ts            slot generation in shop time (Asia/Karachi)
+    errors.ts, api.ts            typed errors → consistent HTTP statuses
+  server/
+    services/                    domain logic (no Next.js imports — reused by the seed)
+      transition.ts              ★ the only code that writes Booking.status
+      workflow.ts, parts.ts, bookings.ts, shops.ts
+    actions/                     server actions (auth → service → refresh)
+    queries/                     read models for pages
+  components/                    booking/, pos/, marketing/, ui/ (shadcn), theme/
+  proxy.ts                       optimistic login redirect (keeps deep links)
+prisma/  schema.prisma · migrations/ · seed.ts
+e2e/     Playwright: lifecycle, security, owner, public specs
+```
+
+### Key design decisions
+
+- **One explicit state machine.** `lib/booking/state-machine.ts` maps 21 actions → allowed source statuses → target status → who may do it (advisor/owner, the *assigned* technician, the *assigned* parts person, any QC / the QC who claimed the job, the booking's customer). `server/services/transition.ts` is the only writer of `Booking.status`: it checks the transition and role, does a **compare-and-set update** (`WHERE status = <current>`), and writes the audit event — all inside the step's transaction.
+- **Tenant isolation is server-side.** A `shopId` may come from the URL (the owner's switcher needs it) but is never trusted: every page, action and API route calls `requireShopAccess` / `requireBookingAccess`, and shop-owned rows are always fetched with `where: { id, shopId }`. Another shop's booking is simply *not found*. Technicians only see bookings assigned to them.
+- **Race-safe by construction.** Slot capacity: an atomic `INSERT … ON CONFLICT` + conditional `UPDATE … WHERE bookedCount < capacity`. QC claim: compare-and-set on status, so the second inspector gets 409. Stock: conditional decrement `WHERE qtyOnHand >= n` plus an append-only `StockMovement` ledger.
+- **Slots come from working hours**, generated in shop time (Asia/Karachi), so a shop always has bookable times however long ago the seed ran; a `Slot` row is created lazily to hold the capacity counter.
+- **Parts semantics.** Checking stock *reserves* what's on the shelf for the job; missing parts go on a purchase order; deliveries (full or partial) raise stock and are reserved for the job automatically; allocation hands them to the technician; cancelling before repair *releases* reservations back to stock.
+- **Estimates are versioned.** Every advisor edit bumps the revision; after a rejection the next version is a new row, so the rejected estimate (and the customer's reason) is kept. Approval/rejection is time-stamped.
+- **Money is whole PKR integers** — no floating-point totals.
+
+## REST API
+
+All endpoints return JSON. Errors are `{ "error": { "code", "message" } }` with **401** (signed out), **403** (role/tenant), **404** (not found or another tenant's), **409** (invalid transition / conflict), **422** (validation). Authentication is the Auth.js session cookie (sign in through `/login`).
+
+| Method & path | Who | Purpose |
+|---|---|---|
+| `GET /api/shops/:shopId` | public | Shop profile + bookable services |
+| `GET /api/shops/:shopId/availability?date=YYYY-MM-DD` | public | Free slots for a shop-local date |
+| `POST /api/bookings` | signed-in customer | Book a slot (capacity enforced atomically → 409 when full) |
+| `GET /api/bookings` | signed-in customer | Your own bookings |
+| `GET /api/shops/:shopId/bookings?status=A,B&q=` | shop staff | Shop bookings (technicians: only their own) |
+| `GET /api/shops/:shopId/bookings/:bookingId` | shop staff | Booking detail, estimate, parts, history + the actions *you* may take |
+| `POST /api/shops/:shopId/bookings/:bookingId/transitions` | per action | `{ "action": "confirm" \| "assignTechnician" \| … \| "cancel", … }` |
+| `GET /api/shops/:shopId/team` | owner, advisor | Team members |
+| `GET /api/shops/:shopId/inventory` | owner, parts | Stock levels |
+| `GET/POST /api/notifications` | signed in | Bell feed / mark read |
+
+## Tests
+
+| Suite | What it proves |
+|---|---|
+| `src/lib/booking/state-machine.test.ts` (Vitest) | every happy-path transition; reject/revise, in-stock skip, QC fail loop, cancellation window; no role can do another's action; invalid transitions rejected |
+| `src/lib/slots.test.ts` (Vitest) | slot generation per working hours, Saturday hours / Sunday closed, forged times rejected, PKT day rollover |
+| `e2e/lifecycle.spec.ts` | the brief's worked example through the real UI, each role in its own browser — new customer → … → estimate **rejected** → revised → approved → parts ordered, **partial** then full delivery → allocated → **QC fails** → rework → passes → collected → **COMPLETED**, with the exact 22-step audit trail and stock levels asserted |
+| `e2e/security.spec.ts` | 401s; **Shop-A staff → 403/404 on Shop-B**; owner isolation; technician sees only assigned jobs; customers can't touch others' bookings; role guards on transitions; 422 validation; cross-tenant assignment blocked; **concurrent slot booking (2 of 3 succeed, 409)**; **concurrent QC claim (first wins, 409)**; cancel returns reserved stock |
+| `e2e/owner.spec.ts` | owner signup → shop → team → service → second shop → switcher; staff scoping; deactivation revokes access |
+| `e2e/public.spec.ts` | directory search/filter, wizard availability, theme toggle persistence, no horizontal scroll at 375px, login redirects, per-role page access, notification bell |
+
+## Deployment (Vercel + Neon)
+
+1. Create a Neon project (pick a region near your users — e.g. Singapore for Pakistan) and copy the **pooled** and **direct** connection strings.
+2. Import the GitHub repo into Vercel. Set `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `AUTH_SESSION_DAYS`, `NEXT_PUBLIC_APP_URL`. Set the **Function Region** to the same region as the database (every workflow step is a transaction — keep the round trips short).
+3. Build command: `prisma migrate deploy && next build` (or run `pnpm db:deploy` once from your machine).
+4. Seed once from your machine against the production database: `pnpm db:seed`.
+5. Smoke-test: `E2E_BASE_URL=https://<your-app>.vercel.app pnpm test:e2e`.
+
+## Project docs
+
+- **[STACK.md](STACK.md)** — the locked stack and the hard rules.
+- **[PLAN.md](PLAN.md)** — data model, the state machine table, phases.
+- **[TRACKER.md](TRACKER.md)** — task board and activity log.
+- `docs/Web Dev - Virtual.pdf` — the hackathon brief.
