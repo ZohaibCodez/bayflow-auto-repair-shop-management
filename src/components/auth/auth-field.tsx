@@ -44,7 +44,7 @@ export function AuthField({
 
       <div
         className={cn(
-          "relative mt-2 overflow-hidden rounded-xl border bg-surface transition-colors",
+          "relative mt-1.5 overflow-hidden rounded-xl border bg-surface transition-colors",
           invalid
             ? "border-destructive/60"
             : "border-line focus-within:border-amber/60 hover:border-steel/40",
@@ -71,7 +71,7 @@ export function AuthField({
           onKeyDown={(e) => setCapsLock(e.getModifierState?.("CapsLock") ?? false)}
           onBlur={() => setCapsLock(false)}
           className={cn(
-            "h-12 w-full bg-transparent text-[0.95rem] text-foreground outline-none placeholder:text-muted-foreground/70",
+            "h-11 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/70",
             icon ? "pl-11" : "pl-4",
             isPassword ? "pr-12" : "pr-4",
             className,

@@ -21,17 +21,20 @@ export function SignupForm() {
   const [state, action, pending] = useActionState<SignupState, FormData>(signupOwner, undefined);
 
   return (
-    <Stagger className="w-full max-w-md">
+    <Stagger className="w-full max-w-[34rem] shorter:[zoom:0.84]">
       <StaggerItem>
-        <h1 className="display text-[clamp(1.9rem,4vw,2.5rem)] text-foreground">
+        <p className="text-[0.68rem] font-medium tracking-[0.2em] text-teal-ink uppercase">
+          New to BayFlow
+        </p>
+        <h1 className="display mt-3 text-[clamp(1.9rem,2.8vw,2.75rem)] leading-none text-foreground">
           Put your shop on the board
         </h1>
-        <p className="mt-2 text-muted-foreground">
+        <p className="mt-2 text-sm text-muted-foreground">
           Set up as an owner. Your shop and your team come next.
         </p>
       </StaggerItem>
 
-      <form action={action} className="mt-8 space-y-5">
+      <form action={action} className="mt-6 space-y-4">
         <StaggerItem>
           <AuthField
             label="Your name"
@@ -89,7 +92,7 @@ export function SignupForm() {
             type="submit"
             size="lg"
             disabled={pending}
-            className="sheen h-12 w-full rounded-xl text-[0.95rem] shadow-lg shadow-amber/20 transition-transform disabled:opacity-100 not-disabled:hover:-translate-y-0.5"
+            className="sheen h-11 w-full rounded-xl text-sm shadow-lg shadow-amber/20 transition-transform disabled:opacity-100 not-disabled:hover:-translate-y-0.5"
           >
             {pending ? (
               <>
@@ -104,7 +107,7 @@ export function SignupForm() {
       </form>
 
       <StaggerItem>
-        <ol className="mt-8 rounded-2xl border border-line bg-surface/60 p-4">
+        <ol className="mt-6 rounded-2xl border border-line bg-surface/60 p-4">
           <h2 className="text-sm text-foreground">What happens next</h2>
           {NEXT.map((step, i) => (
             <li key={step} className="mt-3 flex gap-3 text-sm text-muted-foreground">
@@ -116,7 +119,7 @@ export function SignupForm() {
       </StaggerItem>
 
       <StaggerItem>
-        <p className="mt-7 text-sm text-muted-foreground">
+        <p className="mt-5 text-[0.8rem] text-muted-foreground">
           Already have an account?{" "}
           <Link
             href="/login"

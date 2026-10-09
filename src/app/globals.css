@@ -3,6 +3,9 @@
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
+/* Viewport-height breakpoints, so full-screen layouts can tighten instead of scrolling. */
+@custom-variant short (@media (max-height: 860px));
+@custom-variant shorter (@media (max-height: 720px));
 
 /* ---------------------------------------------------------------------------
    BayFlow brand theme — "the service bay, instrumented"
@@ -136,6 +139,35 @@
   --signal-red: #f26d6d;
   --destructive: #f25555;
   --shadow-panel: none;
+}
+
+/* A panel that stays night in either theme — the sign-in screen's city at
+   night. The shadcn mappings are restated because they resolve where declared. */
+.scene-dark {
+  color-scheme: dark;
+  --ink: #0b1016;
+  --surface: #141b24;
+  --surface-2: #1b2531;
+  --line: #28333f;
+  --fg: #e7ecf2;
+  --muted-fg: #93a0af;
+  --amber: #ffb224;
+  --amber-deep: #e8930c;
+  --amber-ink: #ffb224;
+  --teal: #2fd4a7;
+  --teal-ink: #2fd4a7;
+  --cyan-ink: #45c8e8;
+  --steel: #aeb9c6;
+  --shadow-panel: none;
+  --background: var(--ink);
+  --foreground: var(--fg);
+  --card: var(--surface);
+  --card-foreground: var(--fg);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--muted-fg);
+  --border: var(--line);
+  --input: var(--line);
+  color: var(--fg);
 }
 
 @layer base {

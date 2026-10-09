@@ -6,15 +6,17 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import {
   AlertCircle,
+  ArrowRight,
   CarFront,
   Check,
-  ClipboardList,
+  Crown,
   Loader2,
   Lock,
   Mail,
   Package,
   ShieldCheck,
-  Store,
+  UserRound,
+  UsersRound,
   Wrench,
   type LucideIcon,
 } from "lucide-react";
@@ -24,8 +26,8 @@ import { Stagger, StaggerItem } from "./stagger";
 
 // Seeded demo accounts (see README / prisma/seed.ts). UI convenience only — no auth logic.
 const DEMO: { label: string; email: string; icon: LucideIcon; lands: string }[] = [
-  { label: "Owner", email: "owner@bayflow.test", icon: Store, lands: "Three shops" },
-  { label: "Advisor", email: "sa.lahore@bayflow.test", icon: ClipboardList, lands: "Front desk" },
+  { label: "Owner", email: "owner@bayflow.test", icon: Crown, lands: "Three shops" },
+  { label: "Advisor", email: "sa.lahore@bayflow.test", icon: UserRound, lands: "Front desk" },
   { label: "Technician", email: "tech.lahore@bayflow.test", icon: Wrench, lands: "Your bay" },
   { label: "Parts", email: "parts.lahore@bayflow.test", icon: Package, lands: "Store room" },
   { label: "QC", email: "qc.lahore@bayflow.test", icon: ShieldCheck, lands: "Sign-off" },
@@ -86,15 +88,23 @@ export function LoginForm({
   }
 
   return (
-    <Stagger className="w-full max-w-md">
+    // zoom on very short screens keeps the whole form in one viewport, proportions intact
+    <Stagger className="w-full max-w-[34rem] shorter:[zoom:0.84]">
       <StaggerItem>
-        <h1 className="display text-[clamp(1.9rem,4vw,2.5rem)] text-foreground">Welcome back</h1>
-        <p className="mt-2 text-muted-foreground">Sign in to pick up where the shop left off.</p>
+        <p className="text-[0.68rem] font-medium tracking-[0.2em] text-teal-ink uppercase">
+          Good to see you again
+        </p>
+        <h1 className="display mt-3 text-[clamp(1.9rem,2.8vw,2.75rem)] leading-none text-foreground">
+          Welcome back
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Sign in to pick up where the shop left off.
+        </p>
       </StaggerItem>
 
       {registered && (
         <StaggerItem>
-          <p className="mt-6 flex items-center gap-2.5 rounded-xl border border-teal/30 bg-teal/10 px-3.5 py-3 text-sm text-teal-ink">
+          <p className="mt-5 flex items-center gap-2.5 rounded-xl border border-teal/30 bg-teal/10 px-3.5 py-3 text-sm text-teal-ink">
             <Check className="size-4 shrink-0" />
             Account created. Sign in to continue.
           </p>
@@ -107,7 +117,7 @@ export function LoginForm({
           setAsRole(null);
           void attempt(email, password);
         }}
-        className="mt-8 space-y-5"
+        className="mt-6 space-y-4"
       >
         <StaggerItem>
           <AuthField
@@ -119,7 +129,7 @@ export function LoginForm({
             icon={<Mail className="size-4" />}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            placeholder="you@yourshop.com"
             invalid={Boolean(error)}
             disabled={busy}
           />
@@ -160,7 +170,7 @@ export function LoginForm({
             type="submit"
             size="lg"
             disabled={busy}
-            className="sheen h-12 w-full rounded-xl text-[0.95rem] shadow-lg shadow-amber/20 transition-transform disabled:opacity-100 not-disabled:hover:-translate-y-0.5"
+            className="group/submit sheen h-11 w-full rounded-xl text-sm shadow-[0_8px_28px_-6px] shadow-amber/45 transition-transform disabled:opacity-100 not-disabled:hover:-translate-y-0.5"
           >
             {phase === "done" ? (
               <>
@@ -173,7 +183,10 @@ export function LoginForm({
                 {asRole ? `Signing in as ${asRole}…` : "Signing in…"}
               </>
             ) : (
-              "Sign in"
+              <>
+                Sign in
+                <ArrowRight className="size-4 transition-transform duration-300 group-hover/submit:translate-x-0.5" />
+              </>
             )}
           </Button>
         </StaggerItem>
@@ -183,13 +196,21 @@ export function LoginForm({
           The judge's front door. One click fills the form and signs in, and
           each role says where it lands so the choice is informed. */}
       <StaggerItem>
-        <section className="mt-8 rounded-2xl border border-line bg-surface/60 p-4">
-          <h2 className="text-sm text-foreground">Judging BayFlow?</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Sign in as any role — each one sees a different board. Password is{" "}
-            <span className="readout text-foreground">{DEMO_PASSWORD}</span>.
-          </p>
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <section className="mt-6 rounded-2xl border border-line bg-surface/50 p-4">
+          <div className="flex items-start gap-3">
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-teal/30 bg-teal/10 text-teal-ink">
+              <UsersRound className="size-4" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-sm font-medium text-foreground">Exploring BayFlow?</h2>
+              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                Use a demo role to explore the workspace.
+                <br />
+                Demo password: <span className="readout text-amber-ink">{DEMO_PASSWORD}</span>.
+              </p>
+            </div>
+          </div>
+          <div className="mt-3.5 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {DEMO.map((d) => {
               const Icon = d.icon;
               const active = asRole === d.label;
@@ -199,27 +220,24 @@ export function LoginForm({
                   type="button"
                   onClick={() => void signInAs(d)}
                   disabled={busy}
-                  className={`group/demo flex items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left transition-colors disabled:opacity-60 ${
+                  className={`group/demo flex items-center gap-2.5 rounded-xl border px-3 py-2 text-left transition-colors disabled:opacity-60 ${
                     active
                       ? "border-amber/50 bg-amber/10"
-                      : "border-line bg-surface hover:border-amber/35 hover:bg-surface-2"
+                      : "border-line bg-surface/40 hover:border-amber/35 hover:bg-surface-2"
                   }`}
                 >
-                  <span
-                    className={`grid size-7 shrink-0 place-items-center rounded-lg transition-colors ${
-                      active
-                        ? "bg-amber/20 text-amber-ink"
-                        : "bg-surface-2 text-steel group-hover/demo:text-amber-ink"
-                    }`}
-                  >
+                  <span className="grid size-5 shrink-0 place-items-center text-amber-ink">
                     {active && phase === "working" ? (
-                      <Loader2 className="size-3.5 animate-spin" />
+                      <Loader2 className="size-[1.1rem] animate-spin" />
                     ) : (
-                      <Icon className="size-3.5" />
+                      <Icon
+                        className="size-[1.1rem] transition-transform duration-300 group-hover/demo:scale-110"
+                        strokeWidth={1.75}
+                      />
                     )}
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-xs text-foreground">{d.label}</span>
+                    <span className="block truncate text-[0.8rem] text-foreground">{d.label}</span>
                     <span className="block truncate text-[0.68rem] text-muted-foreground">
                       {d.lands}
                     </span>
@@ -232,13 +250,14 @@ export function LoginForm({
       </StaggerItem>
 
       <StaggerItem>
-        <p className="mt-7 text-sm text-muted-foreground">
-          New shop owner?{" "}
+        <p className="mt-5 flex items-center gap-1.5 text-[0.8rem] text-muted-foreground">
+          New shop owner?
           <Link
             href="/signup"
-            className="text-amber-ink underline decoration-amber/40 underline-offset-4 transition-colors hover:decoration-amber"
+            className="group/signup inline-flex items-center gap-1.5 text-amber-ink underline decoration-amber/40 underline-offset-4 transition-colors hover:decoration-amber"
           >
             Create an account
+            <ArrowRight className="size-3.5 transition-transform duration-300 group-hover/signup:translate-x-0.5" />
           </Link>
         </p>
       </StaggerItem>

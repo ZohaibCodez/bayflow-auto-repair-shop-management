@@ -52,3 +52,47 @@ export function ThemeToggle({ className }: { className?: string }) {
     </button>
   );
 }
+
+/** Both choices on show, the active one lit — for screens with room to spare. */
+export function ThemeSwitch({ className }: { className?: string }) {
+  const { resolvedTheme, setTheme } = useTheme();
+  const mounted = useMounted();
+  const isDark = mounted && resolvedTheme === "dark";
+
+  return (
+    <div
+      role="group"
+      aria-label="Colour theme"
+      className={cn(
+        "inline-flex h-10 items-center gap-0.5 rounded-full border border-line bg-surface/60 p-1",
+        className,
+      )}
+    >
+      {(
+        [
+          ["light", Sun],
+          ["dark", Moon],
+        ] as const
+      ).map(([theme, Icon]) => {
+        const active = mounted && (theme === "dark") === isDark;
+        return (
+          <button
+            key={theme}
+            type="button"
+            onClick={() => setTheme(theme)}
+            aria-label={`${theme === "dark" ? "Dark" : "Light"} theme`}
+            aria-pressed={active}
+            className={cn(
+              "grid size-8 place-items-center rounded-full transition-colors",
+              active
+                ? "bg-teal/15 text-teal-ink ring-1 ring-teal/40"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <Icon className="size-4" />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
