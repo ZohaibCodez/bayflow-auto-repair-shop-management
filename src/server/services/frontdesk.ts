@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Prisma } from "@prisma/client";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { conflict, forbidden, notFound } from "@/lib/errors";
 import { formatPKR } from "@/lib/money";
@@ -16,22 +17,41 @@ import { advisorIds, notify, staffHref } from "./common";
  * Identity: the call is made from the customer's signed-in account, so the caller is already
  * verified — every tool is scoped to bookings where customerId = caller AND shopId = shop.
  *
- * With ANTHROPIC_API_KEY set it runs Claude with tool calling; without it, a deterministic
- * rule-based agent uses the same tools so the demo still works end to end.
+ * The model behind it is picked from the environment: GROQ_API_KEY → an open model on Groq
+ * (OpenAI-compatible tool calling), else ANTHROPIC_API_KEY → Claude, else a deterministic
+ * rule-based agent that uses the same tools, so the demo still works end to end. Any model
+ * error mid-call also falls back to the rules rather than dropping the caller.
  */
 
 const MODEL = "claude-opus-5-5";
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_MODEL = () => process.env.GROQ_MODEL || "openai/gpt-oss-120b";
 
 type Turn = { role: "assistant" | "customer"; text: string; at: string };
 type RecordedAction = { type: "reschedule" | "callback"; bookingCode?: string; detail: string };
+type ToolCall = { id: string; type: "function"; function: { name: string; arguments: string } };
+type ChatMessage =
+  | { role: "user"; content: string }
+  | { role: "assistant"; content: string; tool_calls?: ToolCall[] }
+  | { role: "tool"; tool_call_id: string; content: string };
 type Transcript = {
   display: Turn[];
   /** the Claude conversation, append-only (thinking blocks must be replayed unchanged) */
   messages: Anthropic.Beta.BetaMessageParam[];
+  /** the Groq (OpenAI-format) conversation, without the system prompt */
+  chat?: ChatMessage[];
   actions: RecordedAction[];
 };
 
-export const aiEnabled = () => Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
+type Provider = "groq" | "claude" | "rules";
+const provider = (): Provider =>
+  process.env.GROQ_API_KEY
+    ? "groq"
+    : process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN
+      ? "claude"
+      : "rules";
+
+export const aiEnabled = () => provider() !== "rules";
 
 // ---------------------------------------------------------------------------
 // Caller context + tools (always scoped to the caller's own bookings at this shop)
@@ -233,6 +253,72 @@ async function claudeTurn(
 }
 
 // ---------------------------------------------------------------------------
+// Groq agent (OpenAI-compatible chat completions + function calling)
+// ---------------------------------------------------------------------------
+
+const GROQ_TOOLS = TOOLS.map((tool) => ({
+  type: "function" as const,
+  function: { name: tool.name, description: tool.description, parameters: tool.input_schema },
+}));
+
+type GroqMessage = { content: string | null; tool_calls?: ToolCall[] };
+
+async function groqChat(body: Record<string, unknown>): Promise<GroqMessage> {
+  const res = await fetch(GROQ_URL, {
+    method: "POST",
+    headers: { authorization: `Bearer ${process.env.GROQ_API_KEY}`, "content-type": "application/json" },
+    body: JSON.stringify({ model: GROQ_MODEL(), ...body }),
+    signal: AbortSignal.timeout(20_000), // the caller is waiting on the line
+  });
+  if (!res.ok) throw new Error(`Groq ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  const data = (await res.json()) as { choices: { message: GroqMessage }[] };
+  return data.choices[0].message;
+}
+
+async function groqTurn(
+  t: Transcript,
+  userText: string,
+  shopName: string,
+  callerName: string,
+  bookings: CallerBooking[],
+): Promise<string> {
+  const chat = (t.chat ??= []);
+  chat.push({ role: "user", content: userText });
+
+  for (let i = 0; i < 6; i++) {
+    const msg = await groqChat({
+      messages: [{ role: "system", content: systemPrompt(shopName, callerName) }, ...chat],
+      tools: GROQ_TOOLS,
+      tool_choice: "auto",
+      temperature: 0.3,
+      max_completion_tokens: 1024,
+      reasoning_effort: "low", // a phone conversation: fast, short turns
+    });
+    const calls = msg.tool_calls ?? [];
+    // Keep only what the API accepts back (drops the model's `reasoning` field).
+    chat.push({ role: "assistant", content: msg.content ?? "", ...(calls.length ? { tool_calls: calls } : {}) });
+    if (calls.length) {
+      for (const call of calls) {
+        let args: Record<string, unknown> = {};
+        try {
+          args = JSON.parse(call.function.arguments || "{}");
+        } catch {
+          // a malformed call gets the tool's own "not found" answer below
+        }
+        chat.push({
+          role: "tool",
+          tool_call_id: call.id,
+          content: runTool(call.function.name, args, bookings, t.actions),
+        });
+      }
+      continue;
+    }
+    return (msg.content ?? "").trim() || "Sorry, could you say that again?";
+  }
+  return "Let me get an advisor to call you back about that.";
+}
+
+// ---------------------------------------------------------------------------
 // Rule-based fallback (no API key): same tools, keyword intents
 // ---------------------------------------------------------------------------
 
@@ -336,9 +422,14 @@ export async function frontDeskTurn(userId: string, callId: string, userText: st
   t.display.push({ role: "customer", text, at: now() });
 
   let reply: string;
-  if (aiEnabled()) {
+  const ai = provider();
+  if (ai !== "rules") {
     try {
-      reply = await claudeTurn(t, text, call.shop.name, call.fromUser?.name ?? "the customer", bookings);
+      const callerName = call.fromUser?.name ?? "the customer";
+      reply =
+        ai === "groq"
+          ? await groqTurn(t, text, call.shop.name, callerName, bookings)
+          : await claudeTurn(t, text, call.shop.name, callerName, bookings);
     } catch (e) {
       console.error("AI front desk error — falling back to rules", e);
       reply = rulesTurn(t, text, bookings);
@@ -351,43 +442,66 @@ export async function frontDeskTurn(userId: string, callId: string, userText: st
   return { reply, transcript: t.display };
 }
 
-type Summary = { title: string; summary: string; intent: string; sentiment: "positive" | "neutral" | "negative" };
+const INTENTS = ["status", "estimate", "appointment", "reschedule", "callback", "complaint", "other"] as const;
+
+/** What a model's summary must look like before it becomes an advisor's task. */
+const summarySchema = z.object({
+  title: z.string().trim().min(1).max(120),
+  summary: z.string().trim().min(1).max(1200),
+  intent: z.enum(INTENTS),
+  sentiment: z.enum(["positive", "neutral", "negative"]),
+});
+type Summary = z.infer<typeof summarySchema>;
+
+const SUMMARY_JSON_SCHEMA = {
+  type: "object",
+  properties: {
+    title: { type: "string", description: "Imperative task for the service advisor, max 80 chars, e.g. 'Call back Ahmed about the estimate'" },
+    summary: { type: "string", description: "2-3 sentences: what the customer wanted, what they were told, what is still open" },
+    intent: { type: "string", enum: [...INTENTS] },
+    sentiment: { type: "string", enum: ["positive", "neutral", "negative"] },
+  },
+  required: ["title", "summary", "intent", "sentiment"],
+  additionalProperties: false,
+};
+
+function summaryPrompt(t: Transcript, bookingCode: string | null) {
+  const transcript = t.display.map((d) => `${d.role === "assistant" ? "Assistant" : "Customer"}: ${d.text}`).join("\n");
+  return `Summarise this AI front-desk phone call for the shop's service advisor${bookingCode ? ` (booking ${bookingCode})` : ""}.\nRequests recorded during the call: ${JSON.stringify(t.actions)}\n\nTranscript:\n${transcript}`;
+}
+
+const parseSummary = (text: string): Summary => {
+  const s = summarySchema.parse(JSON.parse(text));
+  return { ...s, title: s.title.slice(0, 80) };
+};
 
 async function claudeSummary(t: Transcript, bookingCode: string | null): Promise<Summary> {
   const client = new Anthropic();
-  const transcript = t.display.map((d) => `${d.role === "assistant" ? "Assistant" : "Customer"}: ${d.text}`).join("\n");
   const response = await client.beta.messages.create({
     model: MODEL,
     max_tokens: 1024,
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default",
-    output_config: {
-      effort: "low",
-      format: {
-        type: "json_schema",
-        schema: {
-          type: "object",
-          properties: {
-            title: { type: "string", description: "Imperative task for the service advisor, max 80 chars, e.g. 'Call back Ahmed about the estimate'" },
-            summary: { type: "string", description: "2-3 sentences: what the customer wanted, what they were told, what is still open" },
-            intent: { type: "string", enum: ["status", "estimate", "appointment", "reschedule", "callback", "complaint", "other"] },
-            sentiment: { type: "string", enum: ["positive", "neutral", "negative"] },
-          },
-          required: ["title", "summary", "intent", "sentiment"],
-          additionalProperties: false,
-        },
-      },
-    },
-    messages: [
-      {
-        role: "user",
-        content: `Summarise this AI front-desk phone call for the shop's service advisor${bookingCode ? ` (booking ${bookingCode})` : ""}.\nRequests recorded during the call: ${JSON.stringify(t.actions)}\n\nTranscript:\n${transcript}`,
-      },
-    ],
+    output_config: { effort: "low", format: { type: "json_schema", schema: SUMMARY_JSON_SCHEMA } },
+    messages: [{ role: "user", content: summaryPrompt(t, bookingCode) }],
   });
   if (response.stop_reason === "refusal") throw new Error("summary refused");
   const text = response.content.find((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text")?.text ?? "";
-  return JSON.parse(text) as Summary;
+  return parseSummary(text);
+}
+
+async function groqSummary(t: Transcript, bookingCode: string | null): Promise<Summary> {
+  const msg = await groqChat({
+    messages: [{ role: "user", content: summaryPrompt(t, bookingCode) }],
+    response_format: {
+      type: "json_schema",
+      json_schema: { name: "call_summary", strict: true, schema: SUMMARY_JSON_SCHEMA },
+    },
+    temperature: 0.2,
+    max_completion_tokens: 1024,
+    reasoning_effort: "low",
+  });
+  return parseSummary(msg.content ?? "");
 }
 
 function rulesSummary(t: Transcript, callerName: string, bookingCode: string | null): Summary {
@@ -432,9 +546,13 @@ export async function finishFrontDesk(userId: string, callId: string) {
     : null;
 
   let s: Summary;
-  if (aiEnabled() && t.display.some((d) => d.role === "customer")) {
+  const ai = provider();
+  if (ai !== "rules" && t.display.some((d) => d.role === "customer")) {
     try {
-      s = await claudeSummary(t, booking?.code ?? null);
+      s =
+        ai === "groq"
+          ? await groqSummary(t, booking?.code ?? null)
+          : await claudeSummary(t, booking?.code ?? null);
     } catch (e) {
       console.error("AI summary error — falling back to rules", e);
       s = rulesSummary(t, call.fromUser?.name ?? "Customer", booking?.code ?? null);

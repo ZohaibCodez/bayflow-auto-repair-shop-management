@@ -29,6 +29,8 @@ import { Timeline } from "@/components/booking/timeline";
 import { EstimateView, estimateTotal } from "@/components/booking/estimate-view";
 import { ActionPanel } from "@/components/booking/action-panel";
 import { CallButton } from "@/components/calls/call-provider";
+import { CallLogList } from "@/components/calls/call-log";
+import { listCalls } from "@/server/queries/calls";
 
 export default async function PosBookingPage({ params }: PageProps<"/pos/[shopId]/bookings/[bookingId]">) {
   const { shopId, bookingId } = await params;
@@ -48,20 +50,25 @@ export default async function PosBookingPage({ params }: PageProps<"/pos/[shopId
   ]);
   if (!b) notFound();
 
+  const isAdvisor = hasShopRole(access, ["OWNER", "SERVICE_ADVISOR"]);
   // Vehicle service history: earlier visits of the same plate at this shop.
-  const history = await prisma.booking.findMany({
-    where: { shopId, id: { not: b.id }, vehicle: { plate: b.vehicle.plate } },
-    orderBy: { createdAt: "desc" },
-    take: 6,
-    select: {
-      id: true,
-      code: true,
-      status: true,
-      serviceNames: true,
-      createdAt: true,
-      issues: { select: { id: true } },
-    },
-  });
+  const [history, calls] = await Promise.all([
+    prisma.booking.findMany({
+      where: { shopId, id: { not: b.id }, vehicle: { plate: b.vehicle.plate } },
+      orderBy: { createdAt: "desc" },
+      take: 6,
+      select: {
+        id: true,
+        code: true,
+        status: true,
+        serviceNames: true,
+        createdAt: true,
+        issues: { select: { id: true } },
+      },
+    }),
+    // The booking's call log is the advisors' business (they make and take the calls).
+    isAdvisor ? listCalls(shopId, { bookingId: b.id, take: 10 }) : Promise.resolve([]),
+  ]);
 
   const actions = availableActions(b, actor);
   const meta = STATUS_META[b.status];
@@ -397,6 +404,19 @@ export default async function PosBookingPage({ params }: PageProps<"/pos/[shopId
               <p className="text-sm text-muted-foreground">First visit for this vehicle at this shop.</p>
             )}
           </section>
+
+          {isAdvisor && (
+            <section className="space-y-2">
+              <h2 className="eyebrow flex items-center gap-1.5 px-1">
+                <Phone className="size-3" /> Calls · {calls.length}
+              </h2>
+              {calls.length ? (
+                <CallLogList calls={calls} />
+              ) : (
+                <p className="px-1 text-sm text-muted-foreground">No calls about this booking yet.</p>
+              )}
+            </section>
+          )}
 
           <section className="panel p-5">
             <h2 className="eyebrow mb-4">Activity · audit log</h2>

@@ -15,13 +15,13 @@ export default async function PosShopLayout({ children, params }: LayoutProps<"/
   const seesAllBookings = hasShopRole(access, ["OWNER", "SERVICE_ADVISOR", "PARTS", "QC"]);
   const isQc = hasShopRole(access, ["OWNER", "QC"]);
   const isParts = hasShopRole(access, ["OWNER", "PARTS"]);
+  const isAdvisor = hasShopRole(access, ["OWNER", "SERVICE_ADVISOR"]);
 
-  const [shops, pending, qcQueue] = await Promise.all([
+  const [shops, pending, qcQueue, openAiTasks] = await Promise.all([
     getStaffShops(user.id),
-    hasShopRole(access, ["OWNER", "SERVICE_ADVISOR"])
-      ? prisma.booking.count({ where: { shopId, status: "PENDING" } })
-      : 0,
+    isAdvisor ? prisma.booking.count({ where: { shopId, status: "PENDING" } }) : 0,
     isQc ? prisma.booking.count({ where: { shopId, status: "QC_PENDING" } }) : 0,
+    isAdvisor ? prisma.aiTask.count({ where: { shopId, done: false } }) : 0,
   ]);
 
   const groups: NavGroup[] = [
@@ -33,6 +33,9 @@ export default async function PosShopLayout({ children, params }: LayoutProps<"/
           ? { href: `${base}/bookings`, label: "Bookings", icon: "bookings", badge: pending }
           : { href: `${base}/bookings`, label: "My jobs", icon: "jobs" },
         ...(isQc ? [{ href: `${base}/qc`, label: "QC queue", icon: "qc" as const, badge: qcQueue }] : []),
+        ...(isAdvisor
+          ? [{ href: `${base}/calls`, label: "Calls & AI", icon: "calls" as const, badge: openAiTasks }]
+          : []),
       ],
     },
     ...(isParts

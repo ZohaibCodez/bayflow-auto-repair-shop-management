@@ -6,6 +6,7 @@ import type { StaffRole } from "@prisma/client";
 import { requireShopAccess, requireUser } from "@/lib/rbac";
 import * as shops from "@/server/services/shops";
 import * as parts from "@/server/services/parts";
+import { completeAiTask } from "@/server/services/frontdesk";
 import { run, type ActionResult } from "./result";
 
 /** Shop-scoped actions: every one proves membership of `shopId` before touching data. */
@@ -142,4 +143,16 @@ export async function receivePurchaseOrderAction(
           : "Delivery received in full — stock updated"
         : "Partial delivery received — stock updated",
   } satisfies ActionResult;
+}
+
+/** An advisor closes an AI Front Desk follow-up. */
+export async function completeAiTaskAction(shopId: string, taskId: string) {
+  return inShop(
+    shopId,
+    async () => {
+      const { user } = await requireShopAccess(shopId, ["OWNER", "SERVICE_ADVISOR"]);
+      await completeAiTask(user.id, shopId, taskId);
+    },
+    "Marked as done",
+  );
 }
