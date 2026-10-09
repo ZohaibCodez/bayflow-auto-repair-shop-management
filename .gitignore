@@ -1,0 +1,60 @@
+# ---------------------------------------------------------------------------
+# BayFlow .gitignore
+# Rule of thumb: never commit secrets, build output, or generated code.
+# ---------------------------------------------------------------------------
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+
+# Env / secrets  (ONLY .env.example is committed)
+.env
+.env.*
+!.env.example
+
+# Next.js build output
+.next/
+out/
+build/
+dist/
+next-env.d.ts
+
+# Prisma generated client (generated code — do not lint or commit)
+src/generated/
+prisma/generated/
+/generated/
+
+# Testing / coverage
+coverage/
+playwright-report/
+test-results/
+/blob-report/
+.playwright/
+
+# Vercel
+.vercel
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor / OS cruft
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# TypeScript
+*.tsbuildinfo
+
+# Misc
+.cache/
+tmp/
