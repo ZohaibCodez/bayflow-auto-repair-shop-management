@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/rbac";
-import { addDaysToKey, dayKeyOf, shopDateKey, shopTime } from "@/lib/time";
-import type { WorkingHours } from "@/lib/slots";
+import { addDaysToKey, shopDateKey, shopTime } from "@/lib/time";
+import { slotStartsFor, type WorkingHours } from "@/lib/slots";
 import { Logo } from "@/components/brand/logo";
 import { BookingWizard } from "@/components/booking/booking-wizard";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
@@ -31,6 +31,7 @@ export default async function BookPage({ params }: PageProps<"/book/[shopId]">) 
         address: true,
         rating: true,
         workingHours: true,
+        slotDurationMin: true,
         services: {
           where: { active: true },
           orderBy: { name: "asc" },
@@ -51,8 +52,11 @@ export default async function BookPage({ params }: PageProps<"/book/[shopId]">) 
     : [];
 
   // The next 14 shop-local days, flagged open/closed from working hours.
+  // A day counts as open if any slot still starts at least 30 min from now (so "today"
+  // after closing time isn't offered, and the wizard opens on the first bookable day).
   const hours = shop.workingHours as WorkingHours;
   const today = shopDateKey();
+  const cutoff = Date.now() + 30 * 60_000;
   const days = Array.from({ length: 14 }, (_, i) => {
     const key = addDaysToKey(today, i);
     const noon = shopTime(key, "12:00");
@@ -61,7 +65,7 @@ export default async function BookPage({ params }: PageProps<"/book/[shopId]">) 
       weekday: fmt({ weekday: "short" }).format(noon),
       day: fmt({ day: "numeric" }).format(noon),
       month: fmt({ month: "short" }).format(noon),
-      open: Boolean(hours[dayKeyOf(key)]),
+      open: slotStartsFor(hours, key, shop.slotDurationMin).some((s) => s.getTime() > cutoff),
     };
   });
 

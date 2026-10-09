@@ -30,22 +30,25 @@ export function ThemeToggle({ className }: { className?: string }) {
       aria-label={label}
       title={label}
       className={cn(
-        "relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg border border-line bg-surface-2 text-steel transition-colors hover:border-amber/40 hover:text-amber",
+        "relative inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface-2 text-steel transition-colors hover:border-amber/40 hover:text-amber",
         className,
       )}
     >
-      <Sun
-        className={cn(
-          "absolute size-4 transition-all duration-300",
-          isDark ? "scale-50 -rotate-90 opacity-0" : "scale-100 rotate-0 opacity-100",
-        )}
-      />
-      <Moon
-        className={cn(
-          "absolute size-4 transition-all duration-300",
-          isDark ? "scale-100 rotate-0 opacity-100" : "scale-50 rotate-90 opacity-0",
-        )}
-      />
+      {/* Both icons sit in the same centred 16px box and cross-fade. */}
+      <span className="relative block size-4">
+        <Sun
+          className={cn(
+            "absolute inset-0 size-4 transition-all duration-300",
+            isDark ? "scale-50 -rotate-90 opacity-0" : "scale-100 rotate-0 opacity-100",
+          )}
+        />
+        <Moon
+          className={cn(
+            "absolute inset-0 size-4 transition-all duration-300",
+            isDark ? "scale-100 rotate-0 opacity-100" : "scale-50 rotate-90 opacity-0",
+          )}
+        />
+      </span>
     </button>
   );
 }

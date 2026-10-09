@@ -21,7 +21,7 @@ export async function getBookingDetail(bookingId: string) {
         orderBy: { revision: "desc" },
         include: { items: { orderBy: { kind: "desc" } }, createdBy: { select: { name: true } } },
       },
-      events: { orderBy: { createdAt: "desc" }, include: { actor: { select: { name: true } } } },
+      events: { orderBy: [{ createdAt: "desc" }, { id: "desc" }], include: { actor: { select: { name: true } } } },
       issues: { orderBy: { createdAt: "desc" }, include: { createdBy: { select: { name: true } } } },
       allocations: { include: { inventoryItem: { select: { sku: true, name: true } } } },
       purchaseOrders: {

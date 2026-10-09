@@ -107,7 +107,7 @@
 }
 
 /* Dark palette ("the service bay, instrumented") — toggled by next-themes via `.dark`. */
-.dark {
+:root.dark {
   color-scheme: dark;
   --ink: #0e1218;
   --surface: #141b24;
