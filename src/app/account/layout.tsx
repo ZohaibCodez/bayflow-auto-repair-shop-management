@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notifications/bell";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { LiveRefresh } from "@/components/live-refresh";
+import { CallProvider } from "@/components/calls/call-provider";
 import { signOutAction } from "@/server/actions/auth";
 
 export default async function AccountLayout({ children }: LayoutProps<"/account">) {
@@ -14,6 +15,7 @@ export default async function AccountLayout({ children }: LayoutProps<"/account"
   const staffShops = await getStaffShops(user.id);
 
   return (
+    <CallProvider>
     <div className="relative flex min-h-screen flex-col">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bay-grid opacity-50" aria-hidden />
       <header className="sticky top-0 z-40 border-b border-line/70 bg-ink/80 backdrop-blur-xl">
@@ -56,5 +58,6 @@ export default async function AccountLayout({ children }: LayoutProps<"/account"
         </div>
       </footer>
     </div>
+    </CallProvider>
   );
 }

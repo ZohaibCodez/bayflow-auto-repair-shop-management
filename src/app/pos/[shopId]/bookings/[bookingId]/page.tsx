@@ -28,6 +28,7 @@ import { ProgressRail } from "@/components/booking/progress-rail";
 import { Timeline } from "@/components/booking/timeline";
 import { EstimateView, estimateTotal } from "@/components/booking/estimate-view";
 import { ActionPanel } from "@/components/booking/action-panel";
+import { CallButton } from "@/components/calls/call-provider";
 
 export default async function PosBookingPage({ params }: PageProps<"/pos/[shopId]/bookings/[bookingId]">) {
   const { shopId, bookingId } = await params;
@@ -312,6 +313,11 @@ export default async function PosBookingPage({ params }: PageProps<"/pos/[shopId
               <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
                 <Mail className="size-3.5" /> {b.customer.email}
               </p>
+              {hasShopRole(access, ["OWNER", "SERVICE_ADVISOR"]) && (
+                <div className="mt-3">
+                  <CallButton bookingId={b.id} label={b.customer.name}>Call customer in-app</CallButton>
+                </div>
+              )}
               {b.customer.phone && (
                 <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
                   <Phone className="size-3.5" /> {b.customer.phone}

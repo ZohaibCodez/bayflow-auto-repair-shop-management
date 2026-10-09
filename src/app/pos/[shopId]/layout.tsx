@@ -5,6 +5,7 @@ import { NotificationBell } from "@/components/notifications/bell";
 import { MobileNav, Sidebar, type NavGroup } from "@/components/pos/sidebar";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { LiveRefresh } from "@/components/live-refresh";
+import { CallProvider } from "@/components/calls/call-provider";
 
 export default async function PosShopLayout({ children, params }: LayoutProps<"/pos/[shopId]">) {
   const { shopId } = await params;
@@ -67,6 +68,7 @@ export default async function PosShopLayout({ children, params }: LayoutProps<"/
   };
 
   return (
+    <CallProvider>
     <div className="flex min-h-screen">
       <Sidebar {...navProps} />
       <div className="flex min-w-0 flex-1 flex-col">
@@ -82,5 +84,6 @@ export default async function PosShopLayout({ children, params }: LayoutProps<"/
         <LiveRefresh query={`shopId=${shopId}`} />
       </div>
     </div>
+    </CallProvider>
   );
 }

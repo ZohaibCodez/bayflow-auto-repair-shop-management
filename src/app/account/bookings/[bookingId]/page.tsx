@@ -24,6 +24,7 @@ import { Timeline } from "@/components/booking/timeline";
 import { EstimateView, estimateTotal } from "@/components/booking/estimate-view";
 import { CancelBooking, EstimateDecision, PickupButton } from "@/components/booking/customer-actions";
 import { FallbackImage } from "@/components/fallback-image";
+import { CallButton } from "@/components/calls/call-provider";
 import { IMAGES } from "@/lib/images";
 
 export default async function CustomerBookingPage({
@@ -163,6 +164,9 @@ export default async function CustomerBookingPage({
               <p className="mt-1 flex items-start gap-1.5 text-sm text-muted-foreground">
                 <MapPin className="mt-0.5 size-3.5 shrink-0" /> {b.shop.address}, {b.shop.city}
               </p>
+              <div className="mt-3">
+                <CallButton bookingId={b.id} label={b.shop.name}>Call the shop in-app</CallButton>
+              </div>
               <a href={`tel:${b.shop.phone.replace(/\s/g, "")}`} className="mt-1 flex items-center gap-1.5 text-sm text-amber hover:underline">
                 <Phone className="size-3.5" /> {b.shop.phone}
               </a>
