@@ -1,0 +1,412 @@
+// BayFlow data model — see PLAN.md §2 and the state machine in §3.
+// Money is stored as whole-number PKR (Int) to stay exact and avoid float/Decimal pitfalls.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum StaffRole {
+  SERVICE_ADVISOR
+  TECHNICIAN
+  QC
+  PARTS
+}
+
+/// The 15 live statuses + terminal CANCELLED. Transitions enforced in lib/booking/stateMachine.ts.
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  ASSIGNED
+  INSPECTING
+  ESTIMATE_REVIEW
+  AWAITING_CUSTOMER
+  ESTIMATE_APPROVED
+  ESTIMATE_REJECTED
+  PARTS_PENDING
+  PARTS_ORDERED
+  PARTS_READY
+  IN_REPAIR
+  QC_PENDING
+  QC_IN_PROGRESS
+  READY_FOR_PICKUP
+  COMPLETED
+  CANCELLED
+}
+
+enum EstimateStatus {
+  DRAFT
+  SENT
+  APPROVED
+  REJECTED
+}
+
+enum EstimateItemKind {
+  PART
+  LABOR
+}
+
+enum PurchaseOrderStatus {
+  ORDERED
+  PARTIALLY_RECEIVED
+  RECEIVED
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+/// Customers and staff are both Users. A User is "staff" of a shop via Membership,
+/// an "owner" via Shop.ownerId, and a "customer" simply by having bookings.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  phone        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ownedShops    Shop[]         @relation("ShopOwner")
+  memberships   Membership[]
+  vehicles      Vehicle[]
+  bookings      Booking[]      @relation("CustomerBookings")
+  techBookings  Booking[]      @relation("TechBookings")
+  partsBookings Booking[]      @relation("PartsBookings")
+  qcBookings    Booking[]      @relation("QcBookings")
+  notifications Notification[]
+  bookingEvents BookingEvent[]
+  estimates     Estimate[]
+  issues        Issue[]
+}
+
+// ---------------------------------------------------------------------------
+// Tenant: Shop
+// ---------------------------------------------------------------------------
+
+model Shop {
+  id              String   @id @default(cuid())
+  name            String
+  address         String
+  city            String
+  phone           String
+  workingHours    Json // e.g. { "mon": { "open": "09:00", "close": "18:00" }, ... }
+  slotDurationMin Int      @default(60)
+  slotCapacity    Int      @default(1)
+  logoUrl         String?
+  ownerId         String
+  createdAt       DateTime @default(now())
+
+  owner          User            @relation("ShopOwner", fields: [ownerId], references: [id])
+  memberships    Membership[]
+  services       Service[]
+  slots          Slot[]
+  inventory      InventoryItem[]
+  bookings       Booking[]
+  purchaseOrders PurchaseOrder[]
+
+  @@index([city])
+  @@index([ownerId])
+}
+
+/// A staff member's role within one shop. Role is per-shop.
+model Membership {
+  id        String    @id @default(cuid())
+  userId    String
+  shopId    String
+  role      StaffRole
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, shopId, role])
+  @@index([shopId])
+  @@index([userId])
+}
+
+model Service {
+  id          String  @id @default(cuid())
+  shopId      String
+  name        String
+  description String?
+  durationMin Int     @default(60)
+  basePrice   Int? // whole PKR
+  active      Boolean @default(true)
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId])
+}
+
+/// A bookable time slot for a shop. Capacity enforced transactionally (no double-booking).
+model Slot {
+  id          String   @id @default(cuid())
+  shopId      String
+  startsAt    DateTime
+  capacity    Int      @default(1)
+  bookedCount Int      @default(0)
+
+  shop     Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@unique([shopId, startsAt])
+  @@index([shopId, startsAt])
+}
+
+model Vehicle {
+  id         String  @id @default(cuid())
+  customerId String
+  plate      String
+  make       String
+  model      String
+  year       Int
+  color      String?
+  mileage    Int?
+
+  customer User      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@index([customerId])
+  @@index([plate])
+}
+
+// ---------------------------------------------------------------------------
+// Booking (the core aggregate)
+// ---------------------------------------------------------------------------
+
+model Booking {
+  id             String        @id @default(cuid())
+  shopId         String
+  customerId     String
+  vehicleId      String
+  slotId         String?
+  status         BookingStatus @default(PENDING)
+  serviceNames   String[] // snapshot of selected service/problem names
+  problems       String // free-text description from the customer
+  notes          String?
+  assignedTechId String?
+  partsPersonId  String?
+  qcInspectorId  String? // locked when a QC inspector picks the job
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  shop         Shop    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customer     User    @relation("CustomerBookings", fields: [customerId], references: [id])
+  vehicle      Vehicle @relation(fields: [vehicleId], references: [id])
+  slot         Slot?   @relation(fields: [slotId], references: [id])
+  assignedTech User?   @relation("TechBookings", fields: [assignedTechId], references: [id])
+  partsPerson  User?   @relation("PartsBookings", fields: [partsPersonId], references: [id])
+  qcInspector  User?   @relation("QcBookings", fields: [qcInspectorId], references: [id])
+
+  estimates      Estimate[]
+  events         BookingEvent[]
+  purchaseOrders PurchaseOrder[]
+  allocations    PartAllocation[]
+  issues         Issue[]
+  notifications  Notification[]
+  callLogs       CallLog[]
+  aiTasks        AiTask[]
+
+  @@index([shopId, status])
+  @@index([customerId])
+  @@index([assignedTechId])
+}
+
+/// Audit log: one row per accepted state transition (who, when, from, to, note).
+model BookingEvent {
+  id         String         @id @default(cuid())
+  bookingId  String
+  fromStatus BookingStatus?
+  toStatus   BookingStatus
+  actorId    String?
+  actorRole  String?
+  note       String?
+  createdAt  DateTime       @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  actor   User?   @relation(fields: [actorId], references: [id])
+
+  @@index([bookingId])
+}
+
+// ---------------------------------------------------------------------------
+// Estimates
+// ---------------------------------------------------------------------------
+
+model Estimate {
+  id          String         @id @default(cuid())
+  bookingId   String
+  revision    Int            @default(1)
+  laborCost   Int            @default(0)
+  status      EstimateStatus @default(DRAFT)
+  createdById String
+  createdAt   DateTime       @default(now())
+
+  booking   Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  createdBy User           @relation(fields: [createdById], references: [id])
+  items     EstimateItem[]
+
+  @@index([bookingId])
+}
+
+model EstimateItem {
+  id         String           @id @default(cuid())
+  estimateId String
+  kind       EstimateItemKind
+  name       String
+  qty        Int              @default(1)
+  unitCost   Int // whole PKR
+
+  estimate Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+
+  @@index([estimateId])
+}
+
+// ---------------------------------------------------------------------------
+// Inventory & procurement
+// ---------------------------------------------------------------------------
+
+model InventoryItem {
+  id           String @id @default(cuid())
+  shopId       String
+  sku          String
+  name         String
+  qtyOnHand    Int    @default(0)
+  reorderLevel Int    @default(0)
+  unitCost     Int    @default(0) // whole PKR
+
+  shop        Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  poItems     POItem[]
+  allocations PartAllocation[]
+
+  @@unique([shopId, sku])
+  @@index([shopId])
+}
+
+model PurchaseOrder {
+  id        String              @id @default(cuid())
+  shopId    String
+  bookingId String?
+  status    PurchaseOrderStatus @default(ORDERED)
+  createdAt DateTime            @default(now())
+
+  shop    Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id])
+  items   POItem[]
+
+  @@index([shopId])
+  @@index([bookingId])
+}
+
+model POItem {
+  id              String  @id @default(cuid())
+  poId            String
+  inventoryItemId String?
+  name            String
+  qtyOrdered      Int
+  qtyReceived     Int     @default(0)
+
+  po            PurchaseOrder  @relation(fields: [poId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem? @relation(fields: [inventoryItemId], references: [id])
+
+  @@index([poId])
+}
+
+/// Parts reserved/deducted for a booking. Released back to stock on cancellation.
+model PartAllocation {
+  id              String @id @default(cuid())
+  bookingId       String
+  inventoryItemId String
+  qty             Int
+
+  booking       Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+
+  @@index([bookingId])
+}
+
+// ---------------------------------------------------------------------------
+// QC
+// ---------------------------------------------------------------------------
+
+model Issue {
+  id          String   @id @default(cuid())
+  bookingId   String
+  title       String
+  description String?
+  createdById String
+  resolved    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  createdBy User    @relation(fields: [createdById], references: [id])
+
+  @@index([bookingId])
+}
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  bookingId String?
+  type      String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id])
+
+  @@index([userId, read])
+}
+
+// ---------------------------------------------------------------------------
+// Bonus: in-app calling + AI Front Desk (unused until Phase 7)
+// ---------------------------------------------------------------------------
+
+model CallLog {
+  id         String   @id @default(cuid())
+  bookingId  String
+  direction  String // "SA_TO_CUSTOMER" | "CUSTOMER_TO_SA"
+  fromUserId String?
+  toUserId   String?
+  state      String // ringing | connected | ended | missed
+  startedAt  DateTime @default(now())
+  durationSec Int?
+  outcome    String?
+
+  booking Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  aiTask  AiTask?
+
+  @@index([bookingId])
+}
+
+model AiTask {
+  id        String   @id @default(cuid())
+  bookingId String
+  callLogId String?  @unique
+  summary   String
+  intent    String?
+  sentiment String?
+  done      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  booking Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  callLog CallLog? @relation(fields: [callLogId], references: [id])
+
+  @@index([bookingId])
+}
