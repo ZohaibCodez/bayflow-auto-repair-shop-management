@@ -19,9 +19,10 @@ import { IMAGES, photoBackground } from "@/lib/images";
  * so it paints with the document instead of waiting for hydration. Only the
  * floor rail and the job card need the client.
  *
- * The backdrop is a photograph of a lit workshop (`IMAGES.hero`). It is
- * optional by design — `photoBackground` falls back to a painted gradient, so
- * the page still looks composed before the asset lands.
+ * The backdrop is footage of a car in a lit workshop (`IMAGES.heroVideo`),
+ * muted and looping. Under it sits the video's first frame as a still, which
+ * is what shows while the video loads and for anyone who asks for reduced
+ * motion. `photoBackground` falls back to a painted gradient beneath that.
  */
 
 /** Painted when the hero photograph isn't there. */
@@ -45,11 +46,23 @@ export function Hero({ shopCount }: { shopCount: number }) {
       <div className="pointer-events-none absolute inset-0 -z-30 bg-ink" aria-hidden />
       <div
         className="pointer-events-none absolute inset-0 -z-20"
-        style={photoBackground(IMAGES.hero, BACKDROP)}
+        style={photoBackground(IMAGES.heroPoster, BACKDROP)}
+        aria-hidden
+      />
+      {/* Decorative, so no controls or captions; reduced motion keeps the still. */}
+      <video
+        className="pointer-events-none absolute inset-0 -z-20 size-full object-cover motion-reduce:hidden"
+        src={IMAGES.heroVideo}
+        poster={IMAGES.heroPoster}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-r from-ink via-ink/85 to-ink/35 lg:via-ink/70"
+        className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-r from-ink via-ink/80 to-ink/25 lg:via-ink/60"
         aria-hidden
       />
       <div
