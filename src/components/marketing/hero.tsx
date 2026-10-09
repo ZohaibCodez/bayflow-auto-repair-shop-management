@@ -70,7 +70,9 @@ export function Hero({ shopCount }: { shopCount: number }) {
       />
 
       <LiveJobProvider>
-        <div className="relative mx-auto grid w-full max-w-6xl flex-1 items-center gap-10 px-4 pt-28 pb-16 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:gap-12 lg:pt-32">
+        {/* On short desktop screens everything tightens so the stage strip and the
+            floor line still land inside the first screen instead of below the fold. */}
+        <div className="relative mx-auto grid w-full max-w-6xl flex-1 items-center gap-10 px-4 pt-28 pb-16 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:gap-12 lg:pt-32 short:lg:pt-24 short:lg:pb-6">
           <div>
             <p
               className="flex items-center gap-2.5 text-xs tracking-[0.14em] text-steel uppercase opacity-0"
@@ -80,7 +82,7 @@ export function Hero({ shopCount }: { shopCount: number }) {
               {shopCount} {shopCount === 1 ? "shop" : "shops"} taking bookings right now
             </p>
 
-            <h1 className="mt-5 text-[clamp(2.5rem,5.4vw,4.4rem)] text-foreground">
+            <h1 className="mt-5 text-[clamp(2.5rem,5.4vw,4.4rem)] text-foreground short:lg:mt-4 short:lg:text-[clamp(2.25rem,min(5.4vw,8vh),4.4rem)]">
               {/* Archivo carries a width axis, so each line opens from condensed
                 to expanded — a shutter going up. */}
               <span className="display display-shutter block">See your car</span>
@@ -97,7 +99,7 @@ export function Hero({ shopCount }: { shopCount: number }) {
             </h1>
 
             <p
-              className="mt-7 max-w-[46ch] text-lg leading-relaxed text-muted-foreground opacity-0"
+              className="mt-7 max-w-[46ch] text-lg leading-relaxed text-muted-foreground opacity-0 short:lg:mt-5 short:lg:text-base"
               style={{ animation: "hero-in .8s cubic-bezier(.16,1,.3,1) .5s forwards" }}
             >
               Pick a repair shop, approve the estimate from your phone, and watch the job cross
@@ -105,7 +107,7 @@ export function Hero({ shopCount }: { shopCount: number }) {
             </p>
 
             <div
-              className="mt-8 flex flex-wrap items-center gap-3 opacity-0"
+              className="mt-8 flex flex-wrap items-center gap-3 opacity-0 short:lg:mt-6"
               style={{ animation: "hero-in .8s cubic-bezier(.16,1,.3,1) .6s forwards" }}
             >
               <Button
@@ -129,7 +131,7 @@ export function Hero({ shopCount }: { shopCount: number }) {
             </div>
 
             <ul
-              className="mt-9 grid max-w-xl gap-x-5 gap-y-4 opacity-0 sm:grid-cols-3"
+              className="mt-9 grid max-w-xl gap-x-5 gap-y-4 opacity-0 sm:grid-cols-3 short:lg:mt-6"
               style={{ animation: "hero-in .8s cubic-bezier(.16,1,.3,1) .72s forwards" }}
             >
               {TRUST.map(({ icon: Icon, title, detail }) => (
@@ -146,7 +148,7 @@ export function Hero({ shopCount }: { shopCount: number }) {
 
           {/* The card is set down last, and from depth. */}
           <div
-            className="w-full opacity-0"
+            className="w-full opacity-0 short:lg:[zoom:0.9] shorter:lg:[zoom:0.82]"
             style={{ animation: "card-in 1s cubic-bezier(.16,1,.3,1) .55s forwards" }}
           >
             <JobCard />
@@ -155,7 +157,7 @@ export function Hero({ shopCount }: { shopCount: number }) {
 
         {/* ---- The same job, running along the floor ----------------------- */}
         <div
-          className="relative mx-auto hidden w-full max-w-6xl px-4 pb-8 opacity-0 sm:block sm:px-6"
+          className="relative mx-auto hidden w-full max-w-6xl px-4 pb-8 opacity-0 sm:block sm:px-6 short:lg:pb-3"
           style={{ animation: "hero-in .9s cubic-bezier(.16,1,.3,1) .85s forwards" }}
         >
           <FloorRail />
@@ -163,7 +165,7 @@ export function Hero({ shopCount }: { shopCount: number }) {
       </LiveJobProvider>
 
       {/* ---- Floor line --------------------------------------------------- */}
-      <div className="relative mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 pb-6 sm:px-6">
+      <div className="relative mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 pb-6 sm:px-6 short:lg:pb-4">
         <p className="hidden text-xs text-muted-foreground sm:block">
           BayFlow <span className="text-muted-foreground/40">·</span> book it, track it, drive it
         </p>
