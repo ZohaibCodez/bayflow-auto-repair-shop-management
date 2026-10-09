@@ -1,4 +1,6 @@
 import { LIFECYCLE } from "@/lib/booking/statuses";
+import { IMAGES } from "@/lib/images";
+import { FallbackImage } from "@/components/fallback-image";
 
 export function Lifecycle() {
   return (
@@ -50,6 +52,13 @@ export function Lifecycle() {
                   <p className="mt-1.5 max-w-md text-sm leading-relaxed text-muted-foreground">
                     {step.blurb}
                   </p>
+                  {IMAGES.lifecycle[i] && (
+                    <FallbackImage
+                      src={IMAGES.lifecycle[i]}
+                      alt=""
+                      className="mt-4 aspect-[3/2] w-full max-w-md rounded-lg border border-line object-cover"
+                    />
+                  )}
                 </div>
               </li>
             );

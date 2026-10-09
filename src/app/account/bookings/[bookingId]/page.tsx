@@ -23,6 +23,8 @@ import { ProgressRail } from "@/components/booking/progress-rail";
 import { Timeline } from "@/components/booking/timeline";
 import { EstimateView, estimateTotal } from "@/components/booking/estimate-view";
 import { CancelBooking, EstimateDecision, PickupButton } from "@/components/booking/customer-actions";
+import { FallbackImage } from "@/components/fallback-image";
+import { IMAGES } from "@/lib/images";
 
 export default async function CustomerBookingPage({
   params,
@@ -54,9 +56,16 @@ export default async function CustomerBookingPage({
       {sp.booked === "1" && (
         <div className="panel relative overflow-hidden border-teal/40 p-5">
           <div className="flex items-start gap-4">
-            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-teal/15 text-teal">
-              <PartyPopper className="size-5" />
-            </span>
+            <FallbackImage
+              src={IMAGES.bookedSuccess}
+              alt=""
+              className="size-20 shrink-0"
+              fallback={
+                <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-teal/15 text-teal">
+                  <PartyPopper className="size-5" />
+                </span>
+              }
+            />
             <div>
               <p className="font-display-md text-lg text-foreground">You&rsquo;re booked in!</p>
               <p className="mt-1 text-sm text-muted-foreground">

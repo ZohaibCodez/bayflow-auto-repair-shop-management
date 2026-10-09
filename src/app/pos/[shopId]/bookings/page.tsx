@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { listShopBookings, statusCounts } from "@/server/queries/bookings";
 import { BookingRow } from "@/components/booking/booking-row";
 import { EmptyState, PageHeader } from "@/components/pos/page-header";
+import { IMAGES } from "@/lib/images";
 
 const FILTERS: { key: string; label: string; statuses: BookingStatus[] }[] = [
   {
@@ -109,7 +110,11 @@ export default async function PosBookingsPage({ params, searchParams }: PageProp
           ))}
         </div>
       ) : (
-        <EmptyState icon={<ClipboardList className="size-6" />} title="Nothing here">
+        <EmptyState
+          icon={<ClipboardList className="size-6" />}
+          image={q ? IMAGES.empty.noResults : IMAGES.empty.noBookings}
+          title="Nothing here"
+        >
           {q ? "No bookings match your search." : "No bookings at this stage right now."}
         </EmptyState>
       )}

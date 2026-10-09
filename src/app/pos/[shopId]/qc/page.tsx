@@ -7,6 +7,7 @@ import { listShopBookings } from "@/server/queries/bookings";
 import { ClaimButton } from "@/components/booking/claim-button";
 import { StatusBadge } from "@/components/booking/status-badge";
 import { EmptyState, PageHeader } from "@/components/pos/page-header";
+import { IMAGES } from "@/lib/images";
 
 export default async function QcQueuePage({ params }: PageProps<"/pos/[shopId]/qc">) {
   const { shopId } = await params;
@@ -50,7 +51,7 @@ export default async function QcQueuePage({ params }: PageProps<"/pos/[shopId]/q
             ))}
           </ul>
         ) : (
-          <EmptyState icon={<ClipboardCheck className="size-6" />} title="Queue is clear">
+          <EmptyState icon={<ClipboardCheck className="size-6" />} image={IMAGES.empty.queueClear} title="Queue is clear">
             Jobs appear here when a technician sends them to QC.
           </EmptyState>
         )}

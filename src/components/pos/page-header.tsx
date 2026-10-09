@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { FallbackImage } from "@/components/fallback-image";
 
 /** Consistent page heading inside the POS: eyebrow, display title, description, actions. */
 export function PageHeader({
@@ -29,11 +30,14 @@ export function PageHeader({
 
 export function EmptyState({
   icon,
+  image,
   title,
   children,
   className,
 }: {
   icon?: ReactNode;
+  /** optional illustration (falls back to the icon when the file isn't there) */
+  image?: string;
   title: string;
   children?: ReactNode;
   className?: string;
@@ -45,7 +49,16 @@ export function EmptyState({
         className,
       )}
     >
-      {icon && <div className="mb-3 text-steel/60">{icon}</div>}
+      {image ? (
+        <FallbackImage
+          src={image}
+          alt=""
+          className="mb-3 h-28 w-auto"
+          fallback={icon ? <div className="mb-3 text-steel/60">{icon}</div> : null}
+        />
+      ) : (
+        icon && <div className="mb-3 text-steel/60">{icon}</div>
+      )}
       <p className="text-sm font-medium text-foreground">{title}</p>
       {children && <div className="mt-1 max-w-sm text-sm text-muted-foreground">{children}</div>}
     </div>

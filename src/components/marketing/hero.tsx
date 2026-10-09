@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Pipeline } from "@/components/marketing/pipeline";
+import { IMAGES, photoBackground } from "@/lib/images";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -21,6 +22,18 @@ export function Hero({ shopCount }: { shopCount: number }) {
 
   return (
     <section className="relative overflow-hidden">
+      {/* Optional hero photo (public/images/hero-bay.webp) — faded into the page so the
+          headline stays readable in both themes. Without the file nothing changes. */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-90"
+        style={photoBackground(IMAGES.hero, "none")}
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-ink via-ink/85 to-ink/25"
+        aria-hidden
+      />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-ink to-transparent" aria-hidden />
       <div className="pointer-events-none absolute inset-0 bay-grid" aria-hidden />
       <div className="pointer-events-none absolute inset-0 amber-glow" aria-hidden />
 

@@ -104,6 +104,10 @@ model User {
   estimates      Estimate[]
   issues         Issue[]
   stockMovements StockMovement[]
+  callsMade      CallLog[]       @relation("CallsMade")
+  callsReceived  CallLog[]       @relation("CallsReceived")
+  callsAnswered  CallLog[]       @relation("CallsAnswered")
+  aiTasksDone    AiTask[]        @relation("AiTasksDone")
 }
 
 // ---------------------------------------------------------------------------
@@ -120,6 +124,7 @@ model Shop {
   slotDurationMin Int      @default(60)
   slotCapacity    Int      @default(1)
   logoUrl         String?
+  coverImage      String? // e.g. /images/shops/lahore.webp — falls back to a default cover
   description     String?
   rating          Float? // display placeholder until reviews exist
   ownerId         String
@@ -443,40 +448,59 @@ model Notification {
 // ---------------------------------------------------------------------------
 
 /// bookingId is optional: an unanswered call from an unidentified caller has no booking yet.
+/// In-app voice call (WebRTC). Signalling is non-trickle: the caller stores its full SDP
+/// offer, the callee its answer; both sides poll. bookingId is optional so an unidentified
+/// caller could still be logged.
 model CallLog {
-  id          String   @id @default(cuid())
-  shopId      String
-  bookingId   String?
-  direction   String // "SA_TO_CUSTOMER" | "CUSTOMER_TO_SA"
-  fromUserId  String?
-  toUserId    String?
-  state       String // ringing | connected | ended | missed
-  startedAt   DateTime @default(now())
-  durationSec Int?
-  outcome     String?
+  id           String    @id @default(cuid())
+  shopId       String
+  bookingId    String?
+  direction    String // "SA_TO_CUSTOMER" | "CUSTOMER_TO_SA"
+  fromUserId   String?
+  toUserId     String? // null = ring every service advisor of the shop
+  answeredById String?
+  state        String // ringing | connected | ended | missed | declined
+  startedAt    DateTime  @default(now())
+  answeredAt   DateTime?
+  endedAt      DateTime?
+  durationSec  Int?
+  outcome      String? // answered | missed | declined | ai_handled
+  offer        String? // caller SDP (JSON)
+  answer       String? // callee SDP (JSON)
+  aiHandled    Boolean   @default(false)
+  transcript   Json? // AI Front Desk conversation [{ role, text, at }]
 
-  shop    Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  booking Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  aiTask  AiTask?
+  shop       Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  booking    Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  fromUser   User?    @relation("CallsMade", fields: [fromUserId], references: [id])
+  toUser     User?    @relation("CallsReceived", fields: [toUserId], references: [id])
+  answeredBy User?    @relation("CallsAnswered", fields: [answeredById], references: [id])
+  aiTask     AiTask?
 
-  @@index([shopId])
+  @@index([shopId, state])
   @@index([bookingId])
+  @@index([toUserId, state])
 }
 
+/// Follow-up task for the service advisors, created by the AI Front Desk after a call.
 model AiTask {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   shopId    String
   bookingId String?
-  callLogId String?  @unique
+  callLogId String?   @unique
+  title     String    @default("Follow up with customer")
   summary   String
   intent    String?
-  sentiment String?
-  done      Boolean  @default(false)
-  createdAt DateTime @default(now())
+  sentiment String? // positive | neutral | negative
+  done      Boolean   @default(false)
+  doneAt    DateTime?
+  doneById  String?
+  createdAt DateTime  @default(now())
 
   shop    Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
   booking Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   callLog CallLog? @relation(fields: [callLogId], references: [id])
+  doneBy  User?    @relation("AiTasksDone", fields: [doneById], references: [id])
 
   @@index([shopId, done])
   @@index([bookingId])

@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/booking/status-badge";
 import { ProgressRail } from "@/components/booking/progress-rail";
 import { estimateTotal } from "@/components/booking/estimate-view";
+import { FallbackImage } from "@/components/fallback-image";
+import { IMAGES } from "@/lib/images";
 
 export const metadata = { title: "My bookings — BayFlow" };
 
@@ -108,7 +110,12 @@ export default async function AccountPage() {
           </div>
         ) : (
           <div className="panel flex flex-col items-center px-6 py-14 text-center">
-            <CarFront className="size-8 text-steel/60" />
+            <FallbackImage
+              src={IMAGES.empty.noBookings}
+              alt=""
+              className="h-32 w-auto"
+              fallback={<CarFront className="size-8 text-steel/60" />}
+            />
             <p className="mt-3 font-medium text-foreground">Nothing in the shop</p>
             <p className="mt-1 max-w-xs text-sm text-muted-foreground">
               Book a service and follow every step of the repair right here.

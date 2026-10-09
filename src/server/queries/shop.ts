@@ -1,5 +1,19 @@
 import "server-only";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+
+/**
+ * A shop appears in the public directory only once it can actually take a booking:
+ * at least one active service and one active technician.
+ */
+export const LISTED_SHOP = {
+  services: { some: { active: true } },
+  memberships: { some: { role: "TECHNICIAN", active: true } },
+} satisfies Prisma.ShopWhereInput;
+
+export async function isShopListed(shopId: string) {
+  return (await prisma.shop.count({ where: { id: shopId, ...LISTED_SHOP } })) > 0;
+}
 
 /** Read models for shop management screens. All scoped by shopId. */
 

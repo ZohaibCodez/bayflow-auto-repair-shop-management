@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { LISTED_SHOP } from "@/server/queries/shop";
 import { slotStartsFor, type WorkingHours } from "@/lib/slots";
 import { addDaysToKey, formatDay, formatTime, shopDateKey } from "@/lib/time";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,8 @@ import { Hero } from "@/components/marketing/hero";
 import { Lifecycle } from "@/components/marketing/lifecycle";
 import type { ShopCardData } from "@/components/marketing/shop-card";
 import { ShopDirectory } from "@/components/marketing/shop-directory";
+import { FallbackImage } from "@/components/fallback-image";
+import { IMAGES } from "@/lib/images";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +28,7 @@ function nextOpening(hours: WorkingHours, durationMin: number): string | null {
 
 async function getShops(): Promise<ShopCardData[]> {
   const shops = await prisma.shop.findMany({
+    where: LISTED_SHOP,
     orderBy: [{ rating: { sort: "desc", nulls: "last" } }, { createdAt: "asc" }],
     include: { services: { where: { active: true }, select: { name: true } } },
   });
@@ -35,6 +39,7 @@ async function getShops(): Promise<ShopCardData[]> {
     city: s.city,
     description: s.description,
     rating: s.rating,
+    coverImage: s.coverImage,
     serviceNames: s.services.map((v) => v.name),
     nextSlotLabel: nextOpening(s.workingHours as WorkingHours, s.slotDurationMin),
   }));
@@ -75,6 +80,10 @@ export default async function Home() {
           <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
             <div className="relative overflow-hidden rounded-2xl border border-amber/25 bg-surface p-8 sm:p-12">
               <div className="pointer-events-none absolute inset-0 amber-glow" aria-hidden />
+              <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-1/2 lg:block" aria-hidden>
+                <FallbackImage src={IMAGES.ownerCta} alt="" className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-r from-surface via-surface/40 to-transparent" />
+              </div>
               <div className="relative max-w-2xl">
                 <h2 className="font-display text-3xl text-foreground sm:text-4xl">
                   Run a repair shop?

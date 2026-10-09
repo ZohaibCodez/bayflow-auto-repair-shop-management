@@ -27,6 +27,7 @@ export default async function BookPage({ params }: PageProps<"/book/[shopId]">) 
         city: true,
         address: true,
         rating: true,
+        coverImage: true,
         workingHours: true,
         slotDurationMin: true,
         services: {
@@ -68,7 +69,14 @@ export default async function BookPage({ params }: PageProps<"/book/[shopId]">) 
       </header>
       <main className="relative mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:py-14">
         <BookingWizard
-          shop={{ id: shop.id, name: shop.name, city: shop.city, address: shop.address, rating: shop.rating }}
+          shop={{
+            id: shop.id,
+            name: shop.name,
+            city: shop.city,
+            address: shop.address,
+            rating: shop.rating,
+            coverImage: shop.coverImage,
+          }}
           services={shop.services}
           days={days}
           user={user ? { name: user.name, email: user.email } : null}

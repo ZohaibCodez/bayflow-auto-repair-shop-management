@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { Search, SearchX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ShopCard, type ShopCardData } from "./shop-card";
+import { FallbackImage } from "@/components/fallback-image";
+import { IMAGES } from "@/lib/images";
 
 /** Shop grid with text search (name, service, description) and a city filter. */
 export function ShopDirectory({ shops }: { shops: ShopCardData[] }) {
@@ -62,7 +64,12 @@ export function ShopDirectory({ shops }: { shops: ShopCardData[] }) {
         </div>
       ) : (
         <div className="mt-8 flex flex-col items-center rounded-xl border border-dashed border-line py-14 text-center">
-          <SearchX className="size-6 text-steel/60" />
+          <FallbackImage
+            src={IMAGES.empty.noResults}
+            alt=""
+            className="h-28 w-auto"
+            fallback={<SearchX className="size-6 text-steel/60" />}
+          />
           <p className="mt-3 text-sm text-foreground">No shops match that.</p>
           <button
             type="button"

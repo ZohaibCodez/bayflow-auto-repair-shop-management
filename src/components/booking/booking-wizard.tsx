@@ -28,6 +28,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createBookingAction } from "@/server/actions/customer";
+import { FallbackImage } from "@/components/fallback-image";
+import { COVER_FALLBACK } from "@/components/marketing/shop-card";
+import { IMAGES, photoBackground, serviceImage } from "@/lib/images";
 
 type Service = { id: string; name: string; description: string | null; durationMin: number; basePrice: number | null };
 type Day = { key: string; weekday: string; day: string; month: string; open: boolean };
@@ -35,7 +38,7 @@ type Vehicle = { id: string; plate: string; make: string; model: string; year: n
 type Slot = { startsAt: string; label: string; remaining: number };
 
 export type WizardProps = {
-  shop: { id: string; name: string; city: string; address: string; rating: number | null };
+  shop: { id: string; name: string; city: string; address: string; rating: number | null; coverImage: string | null };
   services: Service[];
   days: Day[];
   user: { name: string; email: string } | null;
@@ -54,6 +57,17 @@ const fetcher = (url: string) =>
     if (!r.ok) throw new Error((await r.json()).error ?? "Couldn't load times");
     return r.json() as Promise<{ slots: Slot[] }>;
   });
+
+function ServiceThumb({ name }: { name: string }) {
+  const src = serviceImage(name);
+  const tile = (
+    <span className="grid size-14 shrink-0 place-items-center rounded-lg bg-surface-2 text-steel/70">
+      <Wrench className="size-5" />
+    </span>
+  );
+  if (!src) return tile;
+  return <FallbackImage src={src} alt="" className="size-14 shrink-0 rounded-lg object-cover" fallback={tile} />;
+}
 
 function Field({ id, label, error, children }: { id: string; label: string; error?: string; children: React.ReactNode }) {
   return (
@@ -250,14 +264,19 @@ export function BookingWizard({ shop, services, days, user, vehicles }: WizardPr
                         >
                           {on && <Check className="size-3" strokeWidth={3} />}
                         </span>
-                        <p className="pr-8 font-medium text-foreground">{s.name}</p>
-                        {s.description && <p className="mt-1 pr-6 text-sm text-muted-foreground">{s.description}</p>}
-                        <p className="mt-3 flex items-center gap-3 text-xs text-steel">
-                          <span className="flex items-center gap-1">
-                            <Clock className="size-3" /> ~{s.durationMin} min
-                          </span>
-                          {s.basePrice != null && <span>from {formatPKR(s.basePrice)}</span>}
-                        </p>
+                        <div className="flex gap-3.5">
+                          <ServiceThumb name={s.name} />
+                          <div className="min-w-0">
+                            <p className="pr-8 font-medium text-foreground">{s.name}</p>
+                            {s.description && <p className="mt-1 pr-6 text-sm text-muted-foreground">{s.description}</p>}
+                            <p className="mt-2.5 flex items-center gap-3 text-xs text-steel">
+                              <span className="flex items-center gap-1">
+                                <Clock className="size-3" /> ~{s.durationMin} min
+                              </span>
+                              {s.basePrice != null && <span>from {formatPKR(s.basePrice)}</span>}
+                            </p>
+                          </div>
+                        </div>
                       </button>
                     );
                   })}
@@ -518,7 +537,11 @@ export function BookingWizard({ shop, services, days, user, vehicles }: WizardPr
       {/* Summary */}
       <aside className="lg:sticky lg:top-24 lg:self-start">
         <div className="panel overflow-hidden">
-          <div className="relative border-b border-line p-5">
+          <div className="relative h-28 overflow-hidden" aria-hidden>
+            <div className="absolute inset-0" style={photoBackground(shop.coverImage ?? IMAGES.defaultShop, COVER_FALLBACK)} />
+            <div className="absolute inset-0 bg-gradient-to-t from-surface to-transparent" />
+          </div>
+          <div className="relative border-b border-line p-5 pt-1">
             <div className="pointer-events-none absolute inset-0 amber-glow opacity-70" aria-hidden />
             <p className="eyebrow relative">Booking at</p>
             <p className="relative mt-1 font-display-md text-xl text-foreground">{shop.name}</p>

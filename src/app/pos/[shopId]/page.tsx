@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { BookingStatus } from "@prisma/client";
-import { ArrowRight, Boxes, PartyPopper, Users } from "lucide-react";
+import { ArrowRight, Boxes, EyeOff, PartyPopper, Users } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { guard } from "@/lib/page-guard";
 import { hasShopRole, requireShopAccess } from "@/lib/rbac";
@@ -9,6 +9,7 @@ import { formatLongDay } from "@/lib/time";
 import { formatPKR } from "@/lib/money";
 import { PHASES, STATUS_META, TONE_CLASS } from "@/lib/booking/status-meta";
 import { listShopBookings, statusCounts, type BookingRow } from "@/server/queries/bookings";
+import { isShopListed } from "@/server/queries/shop";
 import { JobLane } from "@/components/booking/job-lane";
 import { PageHeader, Stat } from "@/components/pos/page-header";
 import { estimateTotal } from "@/components/booking/estimate-view";
@@ -24,7 +25,10 @@ export default async function PosHome({ params, searchParams }: PageProps<"/pos/
   const { user, access, actor } = await guard(requireShopAccess(shopId), `/pos/${shopId}`);
   const href = (id: string) => `/pos/${shopId}/bookings/${id}`;
 
-  const rows = await listShopBookings(shopId, actor, { take: 300 });
+  const [rows, listed] = await Promise.all([
+    listShopBookings(shopId, actor, { take: 300 }),
+    access.isOwner ? isShopListed(shopId) : Promise.resolve(true),
+  ]);
   const by = (...s: BookingStatus[]) => rows.filter((b) => s.includes(b.status));
   const mine = (key: "assignedTechId" | "partsPersonId") => (b: BookingRow) => b[key] === user.id;
 
@@ -46,6 +50,21 @@ export default async function PosHome({ params, searchParams }: PageProps<"/pos/
               Next: <Link href={`/pos/${shopId}/team`} className="text-amber hover:underline">add your team</Link>,{" "}
               review your <Link href={`/pos/${shopId}/services`} className="text-amber hover:underline">services</Link> and stock up the{" "}
               <Link href={`/pos/${shopId}/inventory`} className="text-amber hover:underline">inventory</Link>.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {!listed && (
+        <div className="panel flex items-start gap-3 border-amber/30 p-4">
+          <EyeOff className="mt-0.5 size-5 text-amber" />
+          <div>
+            <p className="text-sm font-medium text-foreground">Not in the public shop directory yet</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              Customers will find this shop once it has at least one{" "}
+              <Link href={`/pos/${shopId}/team`} className="text-amber hover:underline">active technician</Link> and one{" "}
+              <Link href={`/pos/${shopId}/services`} className="text-amber hover:underline">active service</Link>. Direct
+              booking links already work.
             </p>
           </div>
         </div>

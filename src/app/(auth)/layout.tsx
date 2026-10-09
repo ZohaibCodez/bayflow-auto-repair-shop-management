@@ -2,12 +2,15 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { IMAGES, photoBackground } from "@/lib/images";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="relative flex min-h-screen">
       {/* Brand panel */}
       <aside className="relative hidden w-1/2 flex-col justify-between overflow-hidden border-r border-line bg-ink p-10 lg:flex">
+        <div className="pointer-events-none absolute inset-0" style={photoBackground(IMAGES.authPanel, "none")} aria-hidden />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink via-ink/70 to-ink/40" aria-hidden />
         <div className="pointer-events-none absolute inset-0 bay-grid" aria-hidden />
         <div className="pointer-events-none absolute inset-0 amber-glow" aria-hidden />
         <Link href="/" className="relative">

@@ -97,6 +97,15 @@ const SHOPS: ShopDef[] = [
   },
 ];
 
+/** Cover photo per seeded shop (public/images/shops/*.webp — optional, see docs/IMAGE-PROMPTS.md). */
+const COVER: Record<string, string> = {
+  lahore: "lahore",
+  karachi: "karachi",
+  isb: "islamabad",
+  pindi: "rawalpindi",
+  fsd: "faisalabad",
+};
+
 const ROLE_PREFIX: Record<StaffRole, string> = {
   SERVICE_ADVISOR: "sa",
   TECHNICIAN: "tech",
@@ -200,6 +209,7 @@ async function main() {
       phone: def.phone,
       description: def.description,
       rating: def.rating,
+      coverImage: `/images/shops/${COVER[def.slug]}.webp`,
       workingHours: DEFAULT_WORKING_HOURS,
       slotDurationMin: 60,
       slotCapacity: 2,
