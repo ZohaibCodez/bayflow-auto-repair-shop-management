@@ -11,8 +11,8 @@
 **Status legend:** `☐ Todo` · `◐ Doing` · `☑ Done` · `⊘ Blocked`
 **Owners:** `Z` Zohaib · `T` Teammate · `AI` Claude · `—` unassigned
 
-**Current focus:** ▶ **Phase 0 — DB live & seeded on Neon; only Vercel/GitHub deploy (P0-5/6) left. Ready for Phase 1.**
-**Last updated:** 2026-10-09 (by AI) — Neon DB migrated + seeded (3 shops, 14 users, 168 slots); build green.
+**Current focus:** ▶ **Phase 1 — brand/design system + cinematic landing (real shop data) + auth UI shipped. Next: RBAC guards, role routing, owner shop/team management.**
+**Last updated:** 2026-10-09 (by AI) — design system, landing page, login + owner signup; build green. (Env now lives in `.env`, not `.env.local`.)
 
 ---
 
@@ -21,8 +21,8 @@
 | Phase | Theme | Tasks done | Status |
 |---|---|---|---|
 | 0 | Foundation & first deploy | 5 / 6 | ▶ DB live + seeded; Vercel/GitHub deploy (P0-5/6) left |
-| 1 | Auth & multi-tenancy | 0 / 5 | ☐ |
-| 2 | Public portal & booking creation | 0 / 4 | ☐ |
+| 1 | Auth & multi-tenancy | 1 / 5 | ◐ design system + auth UI done; RBAC/shop mgmt next |
+| 2 | Public portal & booking creation | ~1 / 4 | ◐ landing + shop directory live |
 | 3 | State machine end-to-end | 0 / 5 | ☐ |
 | 4 | Inventory & procurement | 0 / 3 | ☐ |
 | 5 | QC loop, notifications, dashboards | 0 / 4 | ☐ |
@@ -49,7 +49,8 @@
 
 | ID | Task | Owner | Status | Notes |
 |---|---|---|---|---|
-| P1-1 | User model + owner signup + login (customer + staff login) | — | ☐ | reuse account if email exists |
+| P1-1 | User model + owner signup + login (customer + staff login) | AI | ◐ | login works for all roles (credentials+JWT); owner signup built (`/signup`); polished auth UI. **Remaining:** post-login role-based routing |
+| P1-0 | Brand + design system (theme, Archivo display font, motion, shadcn) | AI | ☑ | graphite + signal-amber, dark-first; `motion` installed; globals.css tokens |
 | P1-2 | `Membership` model + `rbac.ts` (`requireRole`, `scopeToShop`) | — | ☐ | role per shop |
 | P1-3 | Owner: create shop; add/edit/deactivate team members | — | ☐ | |
 | P1-4 | Owner: multiple shops + shop switcher; service catalog CRUD | — | ☐ | |
@@ -61,7 +62,7 @@
 
 | ID | Task | Owner | Status | Notes |
 |---|---|---|---|---|
-| P2-1 | Landing page: hero + shop grid (name, city, services) + search/city filter | — | ☐ | mobile responsive |
+| P2-1 | Landing page: hero + shop grid (name, city, services) + search/city filter | AI | ◐ | cinematic hero w/ animated pipeline instrument, shop directory from live DB, lifecycle section, responsive. **Remaining:** search/city filter, rating |
 | P2-2 | Booking wizard: shop → services/problems → slot → details → review | — | ☐ | multi-select + free text |
 | P2-3 | Slot picker shows only available slots; capacity enforced (txn/unique) | — | ☐ | no double-booking |
 | P2-4 | Create booking `PENDING`; create/reuse customer account | — | ☐ | |
@@ -126,6 +127,7 @@
 
 ## Activity Log  (newest first — append dated lines here for the record)
 
+- **2026-10-09 (AI):** Shipped the brand + first UI. Design system ("service bay, instrumented": graphite + signal-amber, dark-first, Archivo expanded display font, `motion` for animation) in `globals.css`/`layout.tsx`. Built: cinematic **landing page** (`/`) with an animated repair-pipeline hero + shop directory from live DB + lifecycle timeline + owner CTA; polished **login** (`/login`, demo-account quick-fill) and **owner signup** (`/signup`, server action). `/book/[shopId]` placeholder. Switched off Next 16 `cacheComponents` for predictable dynamic rendering. `pnpm build` green (routes: /, /login, /signup, /book/[shopId], /api/auth). Not committed (user commits). ▶ Next: RBAC (`rbac.ts`), role-based post-login routing, owner shop/team management, then role dashboards.
 - **2026-10-09 (AI):** Neon connected. Standardized env on `.env` (Prisma CLI reads `.env`, not `.env.local`). Ran `prisma migrate dev --name init` → tables created on Neon; `db:seed` → 3 shops / 14 users / 12 memberships / 12 services / 168 slots / 12 inventory / 1 vehicle. Verified via live count query. Demo password `password123`. ▶ Next: Phase 1, and Zohaib to do Vercel+GitHub (P0-5/6).
 - **2026-10-09 (AI):** Phase 0 code done — scaffolded Next 16.4 app (TS/Tailwind4/App Router/src), full Prisma schema + client + `db.ts` + idempotent `seed.ts` (3 shops, teams, inventory, slots, demo customer), Auth.js v5 credentials skeleton + `/login`, shadcn/ui (12 components). Pinned Prisma to 6.19.3 (v7 removed `url` from schema). `pnpm build` passes. ▶ Next (Zohaib): create Neon DB + Vercel project for P0-5/P0-6, then Phase 1.
 - **2026-10-09 (AI):** Repo cleaned (CTF track removed, brief → `docs/`), `.gitignore` added, stack locked (`STACK.md`), build plan written (`PLAN.md`), this tracker created. ▶ Next: P0-1 scaffold.
