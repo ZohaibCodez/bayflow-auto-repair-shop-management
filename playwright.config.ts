@@ -28,7 +28,7 @@ export default defineConfig({
     navigationTimeout: 90_000,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
-    video: "retain-on-failure",
+    video: "off", // traces + screenshots are enough, and avoid the ffmpeg download
   },
   projects: [
     { name: "setup", testMatch: /.*\.setup\.ts/ },
