@@ -5,6 +5,7 @@ import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { BayStage } from "@/components/marketing/bay-stage";
 import { JobCard } from "@/components/marketing/job-card";
+import { LiveJobProvider } from "@/components/marketing/live-job";
 
 /**
  * Signing in is arriving at the shop, so the left half *is* the shop: the same
@@ -34,7 +35,9 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             </span>
           </h2>
           <div className="mt-8 max-w-sm xl:mt-10">
-            <JobCard />
+            <LiveJobProvider>
+              <JobCard />
+            </LiveJobProvider>
           </div>
         </div>
 

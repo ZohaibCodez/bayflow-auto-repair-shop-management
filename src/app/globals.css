@@ -24,6 +24,7 @@
   --color-amber-ink: var(--amber-ink);
   --color-teal: var(--teal);
   --color-teal-ink: var(--teal-ink);
+  --color-cyan-ink: var(--cyan-ink);
   --color-steel: var(--steel);
   --color-ink: var(--ink);
   --color-surface: var(--surface);
@@ -77,6 +78,7 @@
   --amber-fg: #1a1205;
   --teal: #0c9a72;
   --teal-ink: #0a6e52;
+  --cyan-ink: #0a6a85;
   --steel: #475565;
   --signal-blue: #2c6bd6;
   --signal-violet: #7646d8;
@@ -126,6 +128,7 @@
   --amber-ink: #ffb224;
   --teal: #2fd4a7;
   --teal-ink: #2fd4a7;
+  --cyan-ink: #45c8e8;
   --steel: #aeb9c6;
   --signal-blue: #6aa6ff;
   --signal-violet: #b794ff;
@@ -256,6 +259,7 @@
     --amber-ink: #8a5000;
     --teal: #0c7a5a;
     --teal-ink: #0a6e52;
+    --cyan-ink: #0a6a85;
   }
 }
 
@@ -290,7 +294,7 @@
 @property --wdth {
   syntax: "<number>";
   inherits: true;
-  initial-value: 125;
+  initial-value: 106;
 }
 @property --sheen {
   syntax: "<percentage>";
@@ -302,13 +306,16 @@
   /* ---- Display type -------------------------------------------------------
      Archivo is loaded with its width axis, so the headline can *open* from
      condensed to expanded instead of fading up. --wdth is animatable. */
+  /* Archivo near its natural width rather than fully expanded: at display
+     sizes the wide axis made every line sprawl, and the headline reads
+     tighter and more modern set close. */
   .display {
     font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
     font-variation-settings:
       "wght" 800,
       "wdth" var(--wdth);
-    letter-spacing: -0.028em;
-    line-height: 0.92;
+    letter-spacing: -0.038em;
+    line-height: 0.88;
     text-wrap: balance;
   }
   .display-shutter {
@@ -448,6 +455,35 @@
     border-top: 1px solid color-mix(in oklab, var(--line) 75%, transparent);
   }
 
+  /* ---- Live accent -------------------------------------------------------
+     The headline's last line and the live card read in the "tracking" colour.
+     Both stops are the text-safe variants, so the gradient still clears 4.5:1
+     on paper when the theme flips. */
+  .text-live {
+    background-image: linear-gradient(100deg, var(--teal-ink), var(--cyan-ink) 65%, var(--teal-ink));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+  /* The caret that sits after the headline, as though it were just typed. */
+  .caret {
+    display: inline-block;
+    width: 0.06em;
+    height: 0.78em;
+    margin-left: 0.1em;
+    vertical-align: baseline;
+    background: var(--teal);
+    animation: caret-blink 1.1s step-end infinite;
+  }
+  /* A panel that reads as live: a teal hairline with light bleeding off it. */
+  .panel-live {
+    border: 1px solid color-mix(in oklab, var(--teal) 45%, transparent);
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--teal) 10%, transparent),
+      0 0 40px -12px color-mix(in oklab, var(--teal) 55%, transparent),
+      0 24px 60px -24px rgb(0 0 0 / 0.65);
+  }
+
   /* ---- Footer wordmark ---------------------------------------------------
      Painted on the bay floor: faded upward with background-clip so it wears
      off toward the top, with the hero's lamp passing over it now and then. */
@@ -502,7 +538,7 @@
     opacity: 1;
   }
   to {
-    --wdth: 125;
+    --wdth: 106;
     opacity: 1;
     transform: translateY(0);
   }
@@ -534,6 +570,15 @@
   }
   to {
     transform: translateX(140%);
+  }
+}
+@keyframes caret-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
   }
 }
 @keyframes wordmark-pass {
@@ -568,13 +613,14 @@
    collapses every duration; without this the headline would stay condensed.) */
 @media (prefers-reduced-motion: reduce) {
   .display-shutter {
-    --wdth: 125;
+    --wdth: 106;
     opacity: 1;
     transform: none;
     animation: none;
   }
   .marquee-track,
-  .wordmark-sweep {
+  .wordmark-sweep,
+  .caret {
     animation: none;
   }
   .wordmark-sweep {

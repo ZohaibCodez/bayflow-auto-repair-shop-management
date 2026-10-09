@@ -62,17 +62,17 @@ export function NavShell({ authSlot }: { authSlot: ReactNode }) {
   }, [open]);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50">
+    <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-4">
       <div
-        className={`transition-[background-color,border-color,backdrop-filter] duration-500 ${
+        className={`mx-auto max-w-6xl rounded-2xl transition-[background-color,border-color,box-shadow,backdrop-filter] duration-500 ${
           lifted || open
-            ? "border-b border-line/70 bg-ink/80 backdrop-blur-xl"
-            : "border-b border-transparent bg-transparent"
+            ? "border border-line/80 bg-ink/75 shadow-lg shadow-black/20 backdrop-blur-xl"
+            : "border border-line/35 bg-ink/25 backdrop-blur-md"
         }`}
       >
         <nav
-          className={`mx-auto flex max-w-6xl items-center justify-between px-4 transition-[height] duration-500 sm:px-6 ${
-            lifted ? "h-14" : "h-[4.5rem]"
+          className={`flex items-center justify-between px-3 transition-[height] duration-500 sm:px-4 ${
+            lifted ? "h-14" : "h-16"
           }`}
         >
           <Link href="/" aria-label="BayFlow home" className="shrink-0">
@@ -83,9 +83,7 @@ export function NavShell({ authSlot }: { authSlot: ReactNode }) {
               lifts — so the nav reads as one object instead of three floating
               words. The marker slides between them rather than cutting. */}
           <div
-            className={`hidden items-center gap-0.5 rounded-full border p-1 transition-colors duration-500 md:flex ${
-              lifted ? "border-line/70 bg-surface/55" : "border-transparent"
-            }`}
+            className="hidden items-center gap-0.5 rounded-full p-1 md:flex"
           >
             {LINKS.map((l) => {
               const active = section === l.section;
@@ -147,7 +145,7 @@ export function NavShell({ authSlot }: { authSlot: ReactNode }) {
               transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
               className="overflow-hidden md:hidden"
             >
-              <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 pb-4 sm:px-6">
+              <div className="flex flex-col gap-1 px-3 pb-3 sm:px-4">
                 {LINKS.map((l) => (
                   <Link
                     key={l.href}
@@ -172,7 +170,9 @@ export function NavShell({ authSlot }: { authSlot: ReactNode }) {
             track fades in from nothing and a soft head leads the edge. */}
         <div
           aria-hidden
-          className={`relative h-0.5 transition-opacity duration-500 ${lifted ? "opacity-100" : "opacity-0"}`}
+          className={`relative mx-3 h-0.5 overflow-hidden rounded-full transition-opacity duration-500 sm:mx-4 ${
+            lifted ? "opacity-100" : "opacity-0"
+          }`}
         >
           <motion.div
             className="h-full origin-left"

@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import {
   AnimatePresence,
   motion,
@@ -9,55 +8,53 @@ import {
   useReducedMotion,
   useSpring,
 } from "motion/react";
+import { Check, ChevronRight, Wrench } from "lucide-react";
 import { BOOKING_STAGES } from "@/lib/booking/statuses";
+import { FallbackImage } from "@/components/fallback-image";
+import { IMAGES } from "@/lib/images";
+import { cn } from "@/lib/utils";
+import { LAST_STAGE, MILESTONES, milestoneFor, useLiveJob } from "./live-job";
 
-const LAST = BOOKING_STAGES.length - 1;
-const DWELL = 2400; // ms a job spends on screen at each stage
+/** What the shop is doing right now, per stage. */
+const TASK: Record<number, { title: string; detail: string; image: string | null }> = {
+  0: { title: "Booking received", detail: "Waiting for the front desk to confirm", image: null },
+  1: { title: "Confirmed", detail: "Finding a technician with a free bay", image: null },
+  2: { title: "Assigned to a bay", detail: "Tariq M. is taking the car in", image: IMAGES.lifecycle[1] },
+  3: { title: "Engine diagnostics", detail: "Checking fault codes and sensor data", image: IMAGES.lifecycle[2] },
+  4: { title: "Estimate written", detail: "Every part and hour itemised for you", image: IMAGES.lifecycle[3] },
+  5: { title: "Estimate approved", detail: "You approved it from your phone", image: IMAGES.lifecycle[3] },
+  6: { title: "Parts allocated", detail: "Reserved from the shelf against this job", image: IMAGES.lifecycle[4] },
+  7: { title: "Repair underway", detail: "Coil pack and oil service in bay 3", image: IMAGES.lifecycle[4] },
+  8: { title: "Road test and sign-off", detail: "A second inspector checks the work", image: IMAGES.lifecycle[5] },
+  9: { title: "Ready for pick-up", detail: "Signed off by Sana K. — come and collect", image: IMAGES.lifecycle[6] },
+};
 
 /**
  * The hero's focal object: the job card that travels with the car.
  *
- * In a real shop this is a paper card that moves bay to bay, so it is the one
- * thing worth animating here — it carries the whole product idea (a job always
- * has exactly one holder and one place) without a word of explanation. It sits
- * on a plane that tilts toward the pointer, with its contents at different
- * depths so the parallax is real rather than a drop shadow.
+ * In a real shop this is the paper card that moves bay to bay, so it is the one
+ * thing worth animating here — it carries the whole product idea without a word
+ * of explanation. It sits on a plane that tilts toward the pointer, with its
+ * contents at different depths so the parallax is real rather than a shadow.
  */
 export function JobCard() {
   const reduce = useReducedMotion();
-  const [stage, setStage] = useState(reduce ? LAST : 0);
-  const [elapsed, setElapsed] = useState(74 * 60); // seconds on the job so far
-  const ref = useRef<HTMLDivElement>(null);
+  const { stage, elapsed } = useLiveJob();
 
-  // Tilt. Springs so the card settles rather than tracking the pointer rigidly.
   const spring = { stiffness: 140, damping: 18, mass: 0.6 };
   const rotX = useSpring(0, spring);
   const rotY = useSpring(0, spring);
-  // Specular highlight position, in percent of the card.
   const glareX = useMotionValue(50);
   const glareY = useMotionValue(0);
-  const glare = useMotionTemplate`radial-gradient(420px circle at ${glareX}% ${glareY}%, color-mix(in oklab, var(--amber) 22%, transparent), transparent 62%)`;
-
-  useEffect(() => {
-    if (reduce) return;
-    const id = setInterval(() => setStage((i) => (i >= LAST ? 0 : i + 1)), DWELL);
-    return () => clearInterval(id);
-  }, [reduce]);
-
-  // A clock that actually ticks, so the readout is never a frozen prop.
-  useEffect(() => {
-    if (reduce) return;
-    const id = setInterval(() => setElapsed((s) => s + 1), 1000);
-    return () => clearInterval(id);
-  }, [reduce]);
+  const glare = useMotionTemplate`radial-gradient(520px circle at ${glareX}% ${glareY}%, color-mix(in oklab, var(--teal) 14%, transparent), transparent 60%)`;
 
   function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
     if (reduce) return;
     const r = e.currentTarget.getBoundingClientRect();
     const px = (e.clientX - r.left) / r.width;
     const py = (e.clientY - r.top) / r.height;
-    rotY.set((px - 0.5) * 14);
-    rotX.set((0.5 - py) * 10);
+    rotY.set((px - 0.5) * 10);
+    rotX.set((0.5 - py) * 7);
     glareX.set(px * 100);
     glareY.set(py * 100);
   }
@@ -69,170 +66,185 @@ export function JobCard() {
     glareY.set(0);
   }
 
-  const current = BOOKING_STAGES[stage];
-  const ready = stage === LAST;
-  // Two accents on purpose: the bright one for fills and glows, the -ink one
-  // for anything set as TEXT, which has to clear 4.5:1 on paper in light mode.
-  const accent = ready ? "var(--teal)" : "var(--amber)";
-  const accentText = ready ? "var(--teal-ink)" : "var(--amber-ink)";
-  const pct = Math.round((stage / LAST) * 100);
-  const clock = `${String(Math.floor(elapsed / 3600)).padStart(2, "0")}:${String(
+  const ready = stage === LAST_STAGE;
+  const task = TASK[stage];
+  const current = milestoneFor(stage);
+  const progress = Math.round(((stage + 1) / BOOKING_STAGES.length) * 100);
+  const clock = [
+    Math.floor(elapsed / 3600),
     Math.floor((elapsed % 3600) / 60),
-  ).padStart(2, "0")}`;
+    elapsed % 60,
+  ]
+    .map((n) => String(n).padStart(2, "0"))
+    .join(":");
 
   return (
-    <div className="[perspective:1500px]" ref={ref}>
+    <div className="[perspective:1600px]">
       <motion.div
         onPointerMove={onPointerMove}
         onPointerLeave={onPointerLeave}
         style={{ rotateX: rotX, rotateY: rotY, transformStyle: "preserve-3d" }}
-        className="relative rounded-2xl border border-line/90 bg-surface/85 shadow-2xl shadow-black/30 backdrop-blur-xl"
+        className="panel-live relative rounded-2xl bg-surface/80 backdrop-blur-2xl"
       >
-        {/* Light raking across the face, following the pointer. */}
         <motion.span
           aria-hidden
           style={{ background: glare }}
           className="pointer-events-none absolute inset-0 rounded-2xl"
         />
-        {/* Thin lit edge along the top — the card catching the work lamp. */}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-x-6 -top-px h-px"
-          style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }}
-        />
 
-        <div className="relative p-5 sm:p-6" style={{ transform: "translateZ(24px)" }}>
+        <div className="relative p-4 sm:p-5" style={{ transform: "translateZ(26px)" }}>
           {/* ---- Vehicle ---- */}
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="readout text-base text-foreground sm:text-lg">LEA&#8209;1234</p>
-              <p className="mt-0.5 text-sm text-muted-foreground">Honda Civic 2019</p>
-            </div>
-            <div className="flex items-center gap-2 rounded-full border border-line bg-surface-2/80 px-2.5 py-1">
-              <span
-                className="pulse-dot size-1.5 rounded-full"
-                style={{ background: accent, color: accent }}
+          <div className="flex items-center gap-3">
+            <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl border border-line bg-surface-2">
+              <FallbackImage
+                src={IMAGES.defaultShop}
+                alt=""
+                className="size-full object-cover"
+                fallback={<Wrench className="size-5 text-steel" />}
               />
-              <span className="readout text-[0.68rem] text-muted-foreground">
-                {ready ? "ready" : "in progress"}
-              </span>
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="readout truncate text-[0.95rem] text-foreground">LEA&#8209;1234</p>
+              <p className="truncate text-xs text-muted-foreground">Honda Civic 2019</p>
             </div>
+            <span
+              className={cn(
+                "flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.7rem]",
+                ready
+                  ? "border-teal/40 bg-teal/10 text-teal-ink"
+                  : "border-line bg-surface-2/80 text-muted-foreground",
+              )}
+            >
+              <span
+                className={cn("pulse-dot size-1.5 rounded-full", ready ? "bg-teal" : "bg-amber")}
+                style={{ color: ready ? "var(--teal)" : "var(--amber)" }}
+              />
+              {ready ? "Ready" : "In progress"}
+            </span>
           </div>
 
-          {/* ---- Stage rail ---- */}
-          <div className="relative mt-7 h-10">
-            <div className="absolute inset-x-0 top-1.5 h-px bg-line" />
-            <motion.div
-              className="absolute left-0 top-1.5 h-px"
-              style={{ background: accent }}
-              animate={{ width: `${pct}%` }}
-              transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 90, damping: 20 }}
-            />
-            <ol className="absolute inset-x-0 top-0 flex justify-between">
-              {BOOKING_STAGES.map((s, i) => {
-                const done = i < stage;
-                const active = i === stage;
-                return (
-                  <li key={s.key} className="relative grid place-items-center">
-                    <span className="sr-only">{s.label}</span>
+          {/* ---- Milestones ---- */}
+          <ol className="relative mt-5 grid grid-cols-4 gap-1">
+            {MILESTONES.map((m, i) => {
+              const done = i < current;
+              const here = i === current;
+              const Icon = done ? Check : m.icon;
+              return (
+                <li key={m.label} className="relative flex flex-col items-center text-center">
+                  {i > 0 && (
                     <span
-                      className="block size-3 rounded-full border-2 transition-[background-color,border-color,transform] duration-300"
-                      style={{
-                        borderColor:
-                          done || active
-                            ? accent
-                            : "color-mix(in oklab, var(--steel) 55%, transparent)",
-                        background: done ? accent : "var(--surface)",
-                        transform: active ? "scale(1.25)" : "scale(1)",
-                      }}
+                      aria-hidden
+                      className={cn(
+                        "absolute top-3.5 right-1/2 left-[-50%] h-px transition-colors duration-500",
+                        done || here ? "bg-teal/70" : "bg-line",
+                      )}
                     />
-                    {active && !reduce && (
-                      <motion.span
-                        // Ripple out of the station the job just reached.
-                        key={`ping-${i}`}
-                        aria-hidden
-                        className="absolute top-0 size-3 rounded-full"
-                        style={{ border: `1.5px solid ${accent}` }}
-                        initial={{ scale: 1, opacity: 0.8 }}
-                        animate={{ scale: 3.2, opacity: 0 }}
-                        transition={{ duration: 1.1, ease: "easeOut" }}
-                      />
+                  )}
+                  <span
+                    className={cn(
+                      "relative z-10 grid size-7 place-items-center rounded-full border transition-colors duration-500",
+                      done && "border-teal/60 bg-teal/15 text-teal-ink",
+                      here && "border-amber/70 bg-amber/15 text-amber-ink",
+                      !done && !here && "border-line bg-surface text-muted-foreground/60",
                     )}
-                  </li>
-                );
-              })}
-            </ol>
+                  >
+                    <Icon className="size-3.5" />
+                  </span>
+                  <span
+                    className={cn(
+                      "mt-1.5 text-[0.68rem] leading-tight",
+                      done || here ? "text-foreground" : "text-muted-foreground/60",
+                    )}
+                  >
+                    {m.label}
+                  </span>
+                  <span className="readout text-[0.62rem] text-muted-foreground/70">
+                    {done || here ? (m.at ?? (here ? "now" : "—")) : "—"}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+
+          {/* ---- The shop ---- */}
+          <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-line bg-surface-2/50 p-2.5">
+            <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-amber/15 text-amber-ink">
+              <Wrench className="size-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[0.8rem] text-foreground">Lahore Auto Care</span>
+              <span className="block truncate text-[0.68rem] text-muted-foreground">
+                Certified workshop &middot; Lahore
+              </span>
+            </span>
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
           </div>
 
-          {/* ---- Current stage ---- */}
-          <div className="mt-2 min-h-[4.5rem]" aria-live="polite" aria-atomic>
+          {/* ---- What's happening right now ---- */}
+          <div className="mt-2.5 overflow-hidden rounded-xl border border-line bg-surface-2/50">
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
-                key={current.key}
-                initial={reduce ? { opacity: 0 } : { opacity: 0, y: 10, filter: "blur(6px)" }}
-                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                exit={reduce ? { opacity: 0 } : { opacity: 0, y: -10, filter: "blur(6px)" }}
-                transition={{ duration: 0.34, ease: [0.16, 1, 0.3, 1] }}
+                key={stage}
+                initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduce ? { opacity: 0 } : { opacity: 0, y: -8 }}
+                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                className="flex items-center gap-3 p-2.5"
+                aria-live="polite"
               >
-                <p
-                  className="font-display-md text-2xl sm:text-[1.7rem]"
-                  style={{ color: accentText }}
-                >
-                  {current.label}
-                </p>
-                <p className="mt-1 text-sm text-steel">
-                  {current.owner} &middot; {current.where}
-                </p>
+                <span className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-lg border border-line bg-surface">
+                  {task.image ? (
+                    <FallbackImage
+                      src={task.image}
+                      alt=""
+                      className="size-full object-cover"
+                      fallback={<Wrench className="size-5 text-steel" />}
+                    />
+                  ) : (
+                    <Wrench className="size-5 text-steel" />
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[0.68rem] text-muted-foreground">Right now</p>
+                  <p className="truncate text-[0.9rem] text-foreground">{task.title}</p>
+                  <p className="truncate text-[0.7rem] text-muted-foreground">{task.detail}</p>
+                </div>
               </motion.div>
             </AnimatePresence>
+
+            <div className="flex items-center gap-2.5 px-2.5 pb-2.5">
+              <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-line">
+                <motion.span
+                  className="block h-full rounded-full"
+                  style={{
+                    background: ready
+                      ? "var(--teal)"
+                      : "linear-gradient(90deg, var(--amber), var(--teal))",
+                  }}
+                  animate={{ width: `${progress}%` }}
+                  transition={
+                    reduce ? { duration: 0 } : { type: "spring", stiffness: 90, damping: 20 }
+                  }
+                />
+              </span>
+              <span className="readout shrink-0 text-[0.68rem] text-foreground">{progress}%</span>
+            </div>
           </div>
 
           {/* ---- Readouts ---- */}
-          <dl className="hairline-t mt-5 grid grid-cols-3 gap-3 pt-4">
+          <dl className="hairline-t mt-3.5 grid grid-cols-3 gap-2 pt-3">
             {[
               ["Stage", `${String(stage + 1).padStart(2, "0")}/${BOOKING_STAGES.length}`],
               ["On the job", clock],
               ["Estimate", stage >= 4 ? "PKR 18,400" : "—"],
             ].map(([label, value]) => (
               <div key={label}>
-                <dt className="text-[0.7rem] text-muted-foreground">{label}</dt>
-                <dd className="readout mt-0.5 text-sm text-foreground">{value}</dd>
+                <dt className="text-[0.66rem] text-muted-foreground">{label}</dt>
+                <dd className="readout mt-0.5 truncate text-[0.8rem] text-foreground">{value}</dd>
               </div>
             ))}
           </dl>
         </div>
-
-        {/* ---- The chit that pops off the card when the car is signed off ----
-            Lifted well above the surface so the tilt parallaxes it visibly. */}
-        <AnimatePresence>
-          {ready && (
-            <motion.div
-              initial={reduce ? { opacity: 0 } : { opacity: 0, y: 14, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ type: "spring", stiffness: 260, damping: 20 }}
-              style={{ transform: "translateZ(70px)" }}
-              className="absolute -bottom-5 -left-3 flex items-center gap-2 rounded-xl border border-teal/40 bg-surface px-3.5 py-2.5 shadow-xl shadow-black/25 sm:-left-6"
-            >
-              <span className="grid size-6 place-items-center rounded-md bg-teal/15">
-                <svg viewBox="0 0 16 16" className="size-3.5" aria-hidden>
-                  <path
-                    d="M3 8.5 6.2 11.6 13 4.8"
-                    fill="none"
-                    stroke="var(--teal)"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </span>
-              <span className="text-sm text-foreground">
-                Signed off by Sana K.
-                <span className="block text-xs text-teal-ink">Customer notified</span>
-              </span>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </motion.div>
     </div>
   );
