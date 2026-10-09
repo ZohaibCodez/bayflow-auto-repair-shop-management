@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -45,10 +46,14 @@ export async function getAvailability(shopId: string, dateKey: string): Promise<
  * bookedCount past capacity (the database serializes the row update).
  */
 export async function claimSlot(tx: Tx, shopId: string, startsAt: Date, capacity: number) {
-  const slot = await tx.slot.upsert({
+  // Atomic create-if-missing. (Prisma's upsert is find-then-create, so two first-ever
+  // bookings of the same slot would race and one would hit the unique constraint.)
+  await tx.$executeRaw`
+    INSERT INTO "Slot" ("id", "shopId", "startsAt", "capacity", "bookedCount")
+    VALUES (${randomUUID()}, ${shopId}, ${startsAt}, ${capacity}, 0)
+    ON CONFLICT ("shopId", "startsAt") DO NOTHING`;
+  const slot = await tx.slot.findUniqueOrThrow({
     where: { shopId_startsAt: { shopId, startsAt } },
-    create: { shopId, startsAt, capacity },
-    update: {},
     select: { id: true },
   });
   const claimed = await tx.$executeRaw`

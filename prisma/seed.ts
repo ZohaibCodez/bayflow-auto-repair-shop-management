@@ -183,6 +183,7 @@ async function main() {
     "customer@bayflow.test",
     "sana@bayflow.test",
     "ali@bayflow.test",
+    "qc2.lahore@bayflow.test",
     ...SHOPS.flatMap((s) => Object.values(ROLE_PREFIX).map((p) => `${p}.${s.slug}@bayflow.test`)),
   ];
   await prisma.notification.deleteMany({ where: { user: { email: { in: seededEmails } } } });
@@ -237,6 +238,14 @@ async function main() {
     }
     console.log(`  ✓ ${def.name} (${def.city})`);
   }
+
+  // Lahore runs two QC inspectors — the shared queue's "first to pick locks it" matters.
+  const qc2 = await upsertUser("qc2.lahore@bayflow.test", "Maryam Saeed", hash);
+  await prisma.membership.upsert({
+    where: { userId_shopId_role: { userId: qc2.id, shopId: shopIdOf["shop_lahore"], role: "QC" } },
+    update: { active: true },
+    create: { userId: qc2.id, shopId: shopIdOf["shop_lahore"], role: "QC" },
+  });
 
   // --- Demo bookings at Lahore Auto Care, walked through the real workflow --
   const L = shopIdOf["shop_lahore"];

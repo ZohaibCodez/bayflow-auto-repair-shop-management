@@ -18,7 +18,9 @@
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -45,6 +47,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@tailwindcss/turbopack": "^4",
     "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20",

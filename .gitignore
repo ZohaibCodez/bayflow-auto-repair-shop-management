@@ -63,3 +63,6 @@ tmp/
 docs/Requirement.txt
 docs/Web-*/
 docs/Web-*.zip
+
+# Playwright
+e2e/.auth/

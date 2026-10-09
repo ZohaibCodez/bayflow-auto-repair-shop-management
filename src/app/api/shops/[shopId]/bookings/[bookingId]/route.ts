@@ -37,6 +37,19 @@ export const GET = apiRoute(async (_req: Request, ctx: RouteContext<"/api/shops/
             items: estimate.items.map(({ kind, name, qty, unitCost }) => ({ kind, name, qty, unitCost })),
           }
         : null,
+      qcInspector: b.qcInspector?.name ?? null,
+      openIssues: b.issues.filter((i) => !i.resolved).map((i) => ({ title: i.title, description: i.description })),
+      parts: b.allocations.map((a) => ({
+        sku: a.inventoryItem.sku,
+        name: a.inventoryItem.name,
+        qty: a.qty,
+        status: a.status,
+      })),
+      purchaseOrders: b.purchaseOrders.map((po) => ({
+        id: po.id,
+        status: po.status,
+        items: po.items,
+      })),
       history: b.timeline.map((e) => ({
         from: e.fromStatus,
         to: e.toStatus,
