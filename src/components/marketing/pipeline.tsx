@@ -95,11 +95,11 @@ export function Pipeline() {
       </div>
 
       {/* station labels (md+) */}
-      <div className="mt-4 hidden justify-between md:flex">
+      <div className="mt-4 hidden grid-cols-10 gap-1 md:grid">
         {BOOKING_STAGES.map((s, i) => (
           <span
             key={s.key}
-            className={`w-10 text-center text-[10px] leading-tight transition-colors duration-300 ${
+            className={`truncate text-center text-[9px] leading-tight transition-colors duration-300 ${
               i <= active ? "text-steel" : "text-muted-foreground/45"
             }`}
           >
