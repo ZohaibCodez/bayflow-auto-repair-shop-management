@@ -2,17 +2,22 @@
 // (all 15 statuses + guards) lands in stateMachine.ts during Phase 3; these are the
 // condensed, customer-legible stages used by the marketing instrument + lifecycle.
 
+/**
+ * `owner` is who holds the job at that stage and `where` is the place in the shop
+ * it physically sits — the two things a customer actually wants to know. The hero's
+ * job card reads both straight off this list.
+ */
 export const BOOKING_STAGES = [
-  { key: "PENDING", label: "Booked" },
-  { key: "CONFIRMED", label: "Confirmed" },
-  { key: "ASSIGNED", label: "Assigned" },
-  { key: "INSPECTING", label: "Inspecting" },
-  { key: "ESTIMATE", label: "Estimate" },
-  { key: "APPROVED", label: "Approved" },
-  { key: "PARTS", label: "Parts" },
-  { key: "IN_REPAIR", label: "In repair" },
-  { key: "QC", label: "Quality check" },
-  { key: "READY", label: "Ready" },
+  { key: "PENDING", label: "Booked", owner: "Customer", where: "online" },
+  { key: "CONFIRMED", label: "Confirmed", owner: "Service advisor", where: "front desk" },
+  { key: "ASSIGNED", label: "Assigned", owner: "Service advisor", where: "bay 3" },
+  { key: "INSPECTING", label: "Inspecting", owner: "Tariq M.", where: "bay 3" },
+  { key: "ESTIMATE", label: "Estimate sent", owner: "Service advisor", where: "front desk" },
+  { key: "APPROVED", label: "Approved", owner: "Customer", where: "on their phone" },
+  { key: "PARTS", label: "Parts allocated", owner: "Hamza R.", where: "store room" },
+  { key: "IN_REPAIR", label: "In repair", owner: "Tariq M.", where: "bay 3" },
+  { key: "QC", label: "Quality check", owner: "Sana K.", where: "test lane" },
+  { key: "READY", label: "Ready for pick-up", owner: "Service advisor", where: "front desk" },
 ] as const;
 
 export type BookingStageKey = (typeof BOOKING_STAGES)[number]["key"];

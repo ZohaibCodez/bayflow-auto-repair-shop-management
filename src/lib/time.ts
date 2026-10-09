@@ -53,6 +53,16 @@ export const formatDateTime = (d: Date) => `${formatDay(d)}, ${formatTime(d)}`;
 export const formatLongDay = (d: Date) =>
   fmt({ weekday: "long", day: "numeric", month: "long" }).format(d);
 
+/** "14m", "2h 14m", "3d 4h" — how long a job has been sitting where it is. */
+export function formatElapsed(from: Date, now: Date = new Date()): string {
+  const mins = Math.max(0, Math.round((now.getTime() - from.getTime()) / 60_000));
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return mins % 60 ? `${hours}h ${mins % 60}m` : `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return hours % 24 ? `${days}d ${hours % 24}h` : `${days}d`;
+}
+
 /** "3m ago", "2h ago", "Fri 10 Oct" — for activity feeds. */
 export function formatRelative(d: Date, now: Date = new Date()): string {
   const s = Math.round((now.getTime() - d.getTime()) / 1000);

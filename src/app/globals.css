@@ -21,7 +21,9 @@
   /* brand ramp exposed as utilities (bg-amber, text-teal, border-line ...) */
   --color-amber: var(--amber);
   --color-amber-deep: var(--amber-deep);
+  --color-amber-ink: var(--amber-ink);
   --color-teal: var(--teal);
+  --color-teal-ink: var(--teal-ink);
   --color-steel: var(--steel);
   --color-ink: var(--ink);
   --color-surface: var(--surface);
@@ -69,8 +71,12 @@
   --muted-fg: #5b6878;
   --amber: #d98300;
   --amber-deep: #b86d00;
+  /* amber/teal used as TEXT: darkened so small type clears 4.5:1 on paper
+     (#8a5000 = 6.5:1 on white, #0a6e52 = 6.2:1). Plain --amber stays for fills. */
+  --amber-ink: #8a5000;
   --amber-fg: #1a1205;
   --teal: #0c9a72;
+  --teal-ink: #0a6e52;
   --steel: #475565;
   --signal-blue: #2c6bd6;
   --signal-violet: #7646d8;
@@ -109,7 +115,7 @@
 /* Dark palette ("the service bay, instrumented") — toggled by next-themes via `.dark`. */
 :root.dark {
   color-scheme: dark;
-  --ink: #0e1218;
+  --ink: #0b1016;
   --surface: #141b24;
   --surface-2: #1b2531;
   --line: #28333f;
@@ -117,7 +123,9 @@
   --muted-fg: #93a0af;
   --amber: #ffb224;
   --amber-deep: #e8930c;
+  --amber-ink: #ffb224;
   --teal: #2fd4a7;
+  --teal-ink: #2fd4a7;
   --steel: #aeb9c6;
   --signal-blue: #6aa6ff;
   --signal-violet: #b794ff;
@@ -148,25 +156,41 @@
   /* Expanded, heavy Archivo — the automotive-signage headline voice */
   .font-display {
     font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
-    font-variation-settings: "wght" 800, "wdth" 125;
+    font-variation-settings:
+      "wght" 800,
+      "wdth" 125;
     letter-spacing: -0.02em;
     line-height: 0.98;
   }
   .font-display-md {
     font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
-    font-variation-settings: "wght" 650, "wdth" 115;
+    font-variation-settings:
+      "wght" 650,
+      "wdth" 115;
     letter-spacing: -0.01em;
   }
   /* faint instrument grid used behind the hero */
   .bay-grid {
     background-image:
-      linear-gradient(to right, color-mix(in oklab, var(--line) 55%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklab, var(--line) 55%, transparent) 1px, transparent 1px);
+      linear-gradient(
+        to right,
+        color-mix(in oklab, var(--line) 55%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in oklab, var(--line) 55%, transparent) 1px,
+        transparent 1px
+      );
     background-size: 46px 46px;
     mask-image: radial-gradient(ellipse 80% 70% at 30% 0%, #000 40%, transparent 78%);
   }
   .amber-glow {
-    background: radial-gradient(60% 50% at 20% 0%, color-mix(in oklab, var(--amber) 22%, transparent), transparent 70%);
+    background: radial-gradient(
+      60% 50% at 20% 0%,
+      color-mix(in oklab, var(--amber) 22%, transparent),
+      transparent 70%
+    );
   }
   /* small uppercase instrument label */
   .eyebrow {
@@ -207,8 +231,14 @@
 }
 
 @keyframes bay-pulse {
-  0% { transform: scale(0.6); opacity: 0.45; }
-  100% { transform: scale(1.9); opacity: 0; }
+  0% {
+    transform: scale(0.6);
+    opacity: 0.45;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
 }
 
 /* Paper is white: print with the light palette even when the screen is in dark mode. */
@@ -223,7 +253,9 @@
     --muted-fg: #555555;
     --steel: #333333;
     --amber: #b86d00;
+    --amber-ink: #8a5000;
     --teal: #0c7a5a;
+    --teal-ink: #0a6e52;
   }
 }
 
@@ -234,10 +266,327 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  *, *::before, *::after {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+  }
+}
+
+/* ===========================================================================
+   Landing-page stage layer
+   The marketing surfaces read as one lit service bay: a floor that recedes,
+   work light pooling on it, and hairline instrumentation over the top. Every
+   effect here is driven by a CSS custom property so JS only ever writes a
+   number — no per-frame style recalculation of colour or layout.
+   ========================================================================= */
+
+/* Registered so they interpolate: unregistered custom properties snap. */
+@property --wdth {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 125;
+}
+@property --sheen {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: -40%;
+}
+
+@layer components {
+  /* ---- Display type -------------------------------------------------------
+     Archivo is loaded with its width axis, so the headline can *open* from
+     condensed to expanded instead of fading up. --wdth is animatable. */
+  .display {
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    font-variation-settings:
+      "wght" 800,
+      "wdth" var(--wdth);
+    letter-spacing: -0.028em;
+    line-height: 0.92;
+    text-wrap: balance;
+  }
+  .display-shutter {
+    --wdth: 72;
+    opacity: 0;
+    animation: shutter-open 1.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /* ---- The bay floor -----------------------------------------------------
+     Fallback for the WebGL stage, and the backdrop for the lower sections:
+     a grid in perspective, fading out before it reaches any text. */
+  .bay-floor {
+    background-image:
+      linear-gradient(
+        to right,
+        color-mix(in oklab, var(--line) 70%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in oklab, var(--line) 70%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 64px 64px;
+    transform: perspective(520px) rotateX(62deg) scale(2.4);
+    transform-origin: 50% 100%;
+    mask-image: linear-gradient(to top, #000 0%, transparent 72%);
+  }
+  .work-light {
+    background: radial-gradient(
+      55% 48% at var(--lx, 22%) var(--ly, 8%),
+      color-mix(in oklab, var(--amber) 26%, transparent),
+      transparent 68%
+    );
+  }
+  .stage-vignette {
+    background: radial-gradient(
+      120% 100% at 50% 40%,
+      transparent 42%,
+      color-mix(in oklab, var(--ink) 92%, transparent) 100%
+    );
+  }
+  /* Film grain. A data-URI of fractal noise keeps it one paint, no canvas. */
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.035;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ---- Cards -------------------------------------------------------------
+     The spotlight follows the pointer: --mx/--my are written by one shared
+     pointermove handler, so hover state costs no React render. */
+  .spotlight {
+    position: relative;
+    isolation: isolate;
+  }
+  .spotlight::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    background: radial-gradient(
+      260px circle at var(--mx, 50%) var(--my, 50%),
+      color-mix(in oklab, var(--amber) 14%, transparent),
+      transparent 70%
+    );
+  }
+  .spotlight:hover::before,
+  .spotlight:focus-within::before {
+    opacity: 1;
+  }
+
+  /* A single hairline that lights up from the pointer outwards. */
+  .edge-glow {
+    position: relative;
+  }
+  .edge-glow::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    background: radial-gradient(
+      220px circle at var(--mx, 50%) var(--my, 50%),
+      color-mix(in oklab, var(--amber) 70%, transparent),
+      transparent 65%
+    );
+    mask:
+      linear-gradient(#000 0 0) content-box exclude,
+      linear-gradient(#000 0 0);
+  }
+  .edge-glow:hover::after,
+  .edge-glow:focus-within::after {
+    opacity: 1;
+  }
+
+  /* ---- Buttons -----------------------------------------------------------
+     A light sweep across the face on hover — the one flourish on the CTA. */
+  .sheen {
+    position: relative;
+    overflow: hidden;
+  }
+  .sheen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      100deg,
+      transparent 32%,
+      color-mix(in oklab, #fff 42%, transparent) 50%,
+      transparent 68%
+    );
+    transform: translateX(var(--sheen, -140%));
+  }
+  .sheen:hover::after {
+    animation: sheen-sweep 0.75s cubic-bezier(0.3, 0.7, 0.2, 1);
+  }
+
+  /* ---- Instrument readouts ----------------------------------------------- */
+  .readout {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+  .hairline-t {
+    border-top: 1px solid color-mix(in oklab, var(--line) 75%, transparent);
+  }
+
+  /* ---- Footer wordmark ---------------------------------------------------
+     Painted on the bay floor: faded upward with background-clip so it wears
+     off toward the top, with the hero's lamp passing over it now and then. */
+  .wordmark-base,
+  .wordmark-sweep {
+    display: block;
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+  .wordmark-base {
+    background-image: linear-gradient(
+      to top,
+      color-mix(in oklab, var(--foreground) 13%, transparent),
+      color-mix(in oklab, var(--foreground) 3%, transparent) 72%,
+      transparent
+    );
+  }
+  .wordmark-sweep {
+    background-image: linear-gradient(
+      100deg,
+      transparent 42%,
+      color-mix(in oklab, var(--amber) 55%, transparent) 50%,
+      transparent 58%
+    );
+    background-size: 280% 100%;
+    background-position: 160% 0;
+    animation: wordmark-pass 9s ease-in-out 2s infinite;
+  }
+
+  /* ---- Marquee ----------------------------------------------------------- */
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee var(--marquee-duration, 38s) linear infinite;
+  }
+  .marquee-track:hover {
+    animation-play-state: paused;
+  }
+  .marquee-mask {
+    mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+  }
+}
+
+@keyframes shutter-open {
+  from {
+    --wdth: 72;
+    opacity: 0;
+    transform: translateY(0.14em);
+  }
+  60% {
+    opacity: 1;
+  }
+  to {
+    --wdth: 125;
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* The job card is set down on the floor: it arrives from depth, not from below. */
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: perspective(1500px) translate3d(0, 26px, -130px) rotateX(7deg);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(1500px) translate3d(0, 0, 0) rotateX(0deg);
+  }
+}
+@keyframes sheen-sweep {
+  from {
+    transform: translateX(-140%);
+  }
+  to {
+    transform: translateX(140%);
+  }
+}
+@keyframes wordmark-pass {
+  0%,
+  62% {
+    background-position: 160% 0;
+  }
+  100% {
+    background-position: -60% 0;
+  }
+}
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0);
+  }
+}
+
+/* Reduced motion: the shutter headline must still be *readable*, so it holds
+   its open state instead of its from-state. (The global rule above already
+   collapses every duration; without this the headline would stay condensed.) */
+@media (prefers-reduced-motion: reduce) {
+  .display-shutter {
+    --wdth: 125;
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+  .marquee-track,
+  .wordmark-sweep {
+    animation: none;
+  }
+  .wordmark-sweep {
+    opacity: 0;
+  }
+  /* The entrance animations carry `opacity: 0` in their from-state, and the
+     global rule above collapses durations rather than removing the animation —
+     so pin the end state explicitly or the hero would never appear. */
+  [style*="hero-in"],
+  [style*="card-in"] {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
   }
 }
