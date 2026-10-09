@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FloorRail } from "@/components/marketing/floor-rail";
+import { HeroVideo } from "@/components/marketing/hero-video";
 import { JobCard } from "@/components/marketing/job-card";
 import { LiveJobProvider } from "@/components/marketing/live-job";
 import { IMAGES, photoBackground } from "@/lib/images";
@@ -20,9 +21,10 @@ import { IMAGES, photoBackground } from "@/lib/images";
  * floor rail and the job card need the client.
  *
  * The backdrop is footage of a car in a lit workshop (`IMAGES.heroVideo`),
- * muted and looping. Under it sits the video's first frame as a still, which
- * is what shows while the video loads and for anyone who asks for reduced
- * motion. `photoBackground` falls back to a painted gradient beneath that.
+ * muted and looping. Under it sits the workshop photograph (`IMAGES.hero`),
+ * which is what shows until the video is playing — and for good if it never
+ * plays or the visitor asks for reduced motion. `photoBackground` falls back
+ * to a painted gradient beneath that.
  */
 
 /** Painted when the hero photograph isn't there. */
@@ -46,20 +48,13 @@ export function Hero({ shopCount }: { shopCount: number }) {
       <div className="pointer-events-none absolute inset-0 -z-30 bg-ink" aria-hidden />
       <div
         className="pointer-events-none absolute inset-0 -z-20"
-        style={photoBackground(IMAGES.heroPoster, BACKDROP)}
+        style={photoBackground(IMAGES.hero, BACKDROP)}
         aria-hidden
       />
-      {/* Decorative, so no controls or captions; reduced motion keeps the still. */}
-      <video
-        className="pointer-events-none absolute inset-0 -z-20 size-full object-cover motion-reduce:hidden"
+      {/* Fades in over the photo only once it is really playing. */}
+      <HeroVideo
         src={IMAGES.heroVideo}
-        poster={IMAGES.heroPoster}
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="auto"
-        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-20 size-full"
       />
       <div
         className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-r from-ink via-ink/80 to-ink/25 lg:via-ink/60"

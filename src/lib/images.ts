@@ -6,9 +6,8 @@
  */
 export const IMAGES = {
   hero: "/images/hero-bay.png",
-  /** Looping hero footage (muted, no audio track) and its first frame. */
+  /** Looping hero footage (muted, no audio track); `hero` shows until it plays. */
   heroVideo: "/images/hero-garage.mp4",
-  heroPoster: "/images/hero-garage-poster.jpg",
   authPanel: "/images/auth-panel.png",
   ownerCta: "/images/owner-cta.png",
   notFound: "/images/not-found.png",
