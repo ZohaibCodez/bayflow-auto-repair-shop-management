@@ -3,15 +3,12 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/rbac";
-import { addDaysToKey, shopDateKey, shopTime } from "@/lib/time";
-import { slotStartsFor, type WorkingHours } from "@/lib/slots";
+import { bookableDays, type WorkingHours } from "@/lib/slots";
 import { Logo } from "@/components/brand/logo";
 import { BookingWizard } from "@/components/booking/booking-wizard";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 export const dynamic = "force-dynamic";
-
-const fmt = (opts: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Karachi", ...opts });
 
 export async function generateMetadata({ params }: PageProps<"/book/[shopId]">) {
   const { shopId } = await params;
@@ -51,23 +48,7 @@ export default async function BookPage({ params }: PageProps<"/book/[shopId]">) 
       })
     : [];
 
-  // The next 14 shop-local days, flagged open/closed from working hours.
-  // A day counts as open if any slot still starts at least 30 min from now (so "today"
-  // after closing time isn't offered, and the wizard opens on the first bookable day).
-  const hours = shop.workingHours as WorkingHours;
-  const today = shopDateKey();
-  const cutoff = Date.now() + 30 * 60_000;
-  const days = Array.from({ length: 14 }, (_, i) => {
-    const key = addDaysToKey(today, i);
-    const noon = shopTime(key, "12:00");
-    return {
-      key,
-      weekday: fmt({ weekday: "short" }).format(noon),
-      day: fmt({ day: "numeric" }).format(noon),
-      month: fmt({ month: "short" }).format(noon),
-      open: slotStartsFor(hours, key, shop.slotDurationMin).some((s) => s.getTime() > cutoff),
-    };
-  });
+  const days = bookableDays(shop.workingHours as WorkingHours, shop.slotDurationMin);
 
   return (
     <div className="relative min-h-screen">

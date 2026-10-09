@@ -1,6 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarClock, ChevronLeft, MapPin, PartyPopper, Phone, ShieldAlert, Sparkles } from "lucide-react";
+import {
+  CalendarClock,
+  ChevronLeft,
+  FileText,
+  MapPin,
+  PartyPopper,
+  Phone,
+  ShieldAlert,
+  Sparkles,
+} from "lucide-react";
 import { guard } from "@/lib/page-guard";
 import { requireBookingAccess } from "@/lib/rbac";
 import { availableActions } from "@/lib/booking/state-machine";
@@ -177,6 +186,18 @@ export default async function CustomerBookingPage({
               <p className="font-mono text-xs text-muted-foreground">{b.vehicle.plate}</p>
             </div>
           </section>
+          {b.estimates.some((e) => e.status === "APPROVED") && (
+            <Link
+              href={`/invoice/${b.id}`}
+              className="panel flex items-center justify-between px-4 py-3 text-sm text-foreground transition-colors hover:border-amber/40"
+            >
+              <span className="flex items-center gap-2">
+                <FileText className="size-4 text-amber" />
+                {b.status === "COMPLETED" ? "View invoice" : "View job sheet"}
+              </span>
+              <span className="text-muted-foreground">→</span>
+            </Link>
+          )}
           {actions.includes("cancel") && (
             <div className="px-1">
               <CancelBooking bookingId={b.id} />

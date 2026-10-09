@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_WORKING_HOURS, isValidSlotStart, slotStartsFor } from "./slots";
+import { bookableDays, DEFAULT_WORKING_HOURS, isValidSlotStart, slotStartsFor } from "./slots";
 import { formatTime, shopDateKey, shopTime } from "./time";
 
 describe("slot generation (shop time, Asia/Karachi)", () => {
@@ -28,6 +28,16 @@ describe("slot generation (shop time, Asia/Karachi)", () => {
     const forged = shopTime("2026-10-09", "10:17");
     expect(isValidSlotStart(DEFAULT_WORKING_HOURS, "2026-10-09", 60, real)).toBe(true);
     expect(isValidSlotStart(DEFAULT_WORKING_HOURS, "2026-10-09", 60, forged)).toBe(false);
+  });
+
+  it("bookableDays: today after closing is not offered; Sunday is closed", () => {
+    // Friday 2026-10-09 at 19:00 PKT (14:00 UTC) — the shop closed at 18:00.
+    const days = bookableDays(DEFAULT_WORKING_HOURS, 60, 3, new Date("2026-10-09T14:00:00Z"));
+    expect(days.map((d) => [d.key, d.weekday, d.open])).toEqual([
+      ["2026-10-09", "Fri", false],
+      ["2026-10-10", "Sat", true],
+      ["2026-10-11", "Sun", false],
+    ]);
   });
 
   it("shopDateKey rolls over at PKT midnight, not UTC midnight", () => {

@@ -281,6 +281,30 @@ test("full booking lifecycle across every role", async ({ browser, baseURL }) =>
     expect(msgs).toMatch(/ready for pick-up/i);
   });
 
+  await test.step("customer gets an invoice; staff see service history; owner sees revenue", async () => {
+    await cust.goto(`/account/bookings/${bookingId}`);
+    await cust.getByRole("link", { name: /View invoice/ }).click();
+    await cust.waitForURL(new RegExp(`/invoice/${bookingId}`));
+    await expect(cust.getByText("Invoice", { exact: true })).toBeVisible();
+    await expect(cust.getByText("PKR 17,400")).toBeVisible(); // 2 × 6,500 + 900 + 3,500
+    await expect(cust.getByRole("button", { name: /Print/ })).toBeVisible();
+
+    // Another customer can't open it.
+    const sana = await pageAs(browser, "sana");
+    await sana.page.goto(`/invoice/${bookingId}`);
+    await expect(sana.page.getByText(/could not be found/i)).toBeVisible();
+    await sana.close();
+
+    await pos(advisor.page, bookingId);
+    await expect(advisor.page.getByText(/Service history/)).toBeVisible();
+
+    const owner = await pageAs(browser, "owner");
+    await owner.page.goto(`/pos/${L}`);
+    await expect(owner.page.getByText("Revenue")).toBeVisible();
+    await expect(owner.page.getByText("Avg turnaround")).toBeVisible();
+    await owner.close();
+  });
+
   await Promise.all([advisor.close(), tech.close(), parts.close(), qc.close(), custCtx.close(), sa.dispose(), partsApi.dispose()]);
 });
 

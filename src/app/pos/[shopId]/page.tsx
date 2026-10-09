@@ -153,13 +153,33 @@ function RoleSection({ title, subtitle, children }: { title: string; subtitle: s
 }
 
 async function OwnerOverview({ shopId, rows }: { shopId: string; rows: BookingRow[] }) {
-  const [counts, team, inventory, qcFails, qcPasses] = await Promise.all([
+  const [counts, team, inventory, qcFails, qcPasses, completedEvents] = await Promise.all([
     statusCounts(shopId),
     prisma.membership.groupBy({ by: ["role"], where: { shopId, active: true }, _count: { _all: true } }),
     prisma.inventoryItem.findMany({ where: { shopId }, select: { qtyOnHand: true, reorderLevel: true, unitCost: true } }),
     prisma.issue.count({ where: { booking: { shopId } } }),
     prisma.bookingEvent.count({ where: { booking: { shopId }, fromStatus: "QC_IN_PROGRESS", toStatus: "READY_FOR_PICKUP" } }),
+    // Completed jobs: revenue (approved estimate) and turnaround (booked → collected).
+    prisma.bookingEvent.findMany({
+      where: { booking: { shopId }, toStatus: "COMPLETED" },
+      select: {
+        createdAt: true,
+        booking: {
+          select: {
+            createdAt: true,
+            estimates: { where: { status: "APPROVED" }, select: { items: { select: { qty: true, unitCost: true } } } },
+          },
+        },
+      },
+    }),
   ]);
+  const revenue = completedEvents.reduce(
+    (s, e) => s + e.booking.estimates.reduce((t, est) => t + estimateTotal(est.items), 0),
+    0,
+  );
+  const turnaroundH = completedEvents.length
+    ? completedEvents.reduce((s, e) => s + (+e.createdAt - +e.booking.createdAt), 0) / completedEvents.length / 3_600_000
+    : null;
 
   const active = rows.filter((b) => b.status !== "COMPLETED" && b.status !== "CANCELLED");
   const pipelineValue = active.reduce((s, b) => s + (b.estimates[0] ? estimateTotal(b.estimates[0].items) : 0), 0);
@@ -179,15 +199,21 @@ async function OwnerOverview({ shopId, rows }: { shopId: string; rows: BookingRo
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <Stat label="Active jobs" value={active.length} hint={`${counts.COMPLETED ?? 0} completed`} />
         <Stat label="Awaiting customer" value={counts.AWAITING_CUSTOMER ?? 0} tone="amber" hint="Estimates out for approval" />
         <Stat label="Work in pipeline" value={formatPKR(pipelineValue)} hint="Latest estimates on active jobs" />
+        <Stat label="Revenue" value={formatPKR(revenue)} tone="teal" hint={`${completedEvents.length} completed job${completedEvents.length === 1 ? "" : "s"}`} />
         <Stat
-          label="QC first-time pass"
+          label="Avg turnaround"
+          value={turnaroundH == null ? "—" : turnaroundH < 48 ? `${turnaroundH.toFixed(1)} h` : `${(turnaroundH / 24).toFixed(1)} d`}
+          hint="Booked → collected"
+        />
+        <Stat
+          label="QC pass rate"
           value={qcRuns ? `${Math.round((qcPasses / qcRuns) * 100)}%` : "—"}
-          tone="teal"
-          hint={`${qcFails} issue${qcFails === 1 ? "" : "s"} raised`}
+          tone={qcRuns && qcFails / qcRuns > 0.3 ? "red" : "default"}
+          hint={`${qcFails} fail${qcFails === 1 ? "" : "s"} of ${qcRuns} checks`}
         />
       </div>
 

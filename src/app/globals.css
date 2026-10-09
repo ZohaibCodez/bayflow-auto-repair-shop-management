@@ -211,6 +211,22 @@
   100% { transform: scale(1.9); opacity: 0; }
 }
 
+/* Paper is white: print with the light palette even when the screen is in dark mode. */
+@media print {
+  :root.dark {
+    color-scheme: light;
+    --ink: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #f3f4f6;
+    --line: #d1d5db;
+    --fg: #111111;
+    --muted-fg: #555555;
+    --steel: #333333;
+    --amber: #b86d00;
+    --teal: #0c7a5a;
+  }
+}
+
 /* thin, dark scrollbars inside the POS */
 * {
   scrollbar-width: thin;

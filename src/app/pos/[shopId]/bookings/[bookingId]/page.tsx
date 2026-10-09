@@ -5,7 +5,9 @@ import {
   Car,
   ChevronLeft,
   FileText,
+  History,
   Mail,
+  Receipt,
   Package,
   Phone,
   ShieldAlert,
@@ -44,6 +46,21 @@ export default async function PosBookingPage({ params }: PageProps<"/pos/[shopId
     }),
   ]);
   if (!b) notFound();
+
+  // Vehicle service history: earlier visits of the same plate at this shop.
+  const history = await prisma.booking.findMany({
+    where: { shopId, id: { not: b.id }, vehicle: { plate: b.vehicle.plate } },
+    orderBy: { createdAt: "desc" },
+    take: 6,
+    select: {
+      id: true,
+      code: true,
+      status: true,
+      serviceNames: true,
+      createdAt: true,
+      issues: { select: { id: true } },
+    },
+  });
 
   const actions = availableActions(b, actor);
   const meta = STATUS_META[b.status];
@@ -85,12 +102,23 @@ export default async function PosBookingPage({ params }: PageProps<"/pos/[shopId
             )}
           </p>
         </div>
-        {meta.waitingOn !== "—" && (
-          <div className="panel-inset shrink-0 px-3 py-2 text-right">
-            <p className="eyebrow">Waiting on</p>
-            <p className="mt-0.5 text-sm text-foreground">{meta.waitingOn}</p>
-          </div>
-        )}
+        <div className="flex shrink-0 items-stretch gap-2">
+          {b.estimates.some((e) => e.status === "APPROVED") && (
+            <Link
+              href={`/invoice/${b.id}`}
+              className="panel-inset flex items-center gap-2 px-3 py-2 text-sm text-steel transition-colors hover:text-foreground"
+            >
+              <Receipt className="size-4 text-amber" />
+              {b.status === "COMPLETED" ? "Invoice" : "Job sheet"}
+            </Link>
+          )}
+          {meta.waitingOn !== "—" && (
+            <div className="panel-inset px-3 py-2 text-right">
+              <p className="eyebrow">Waiting on</p>
+              <p className="mt-0.5 text-sm text-foreground">{meta.waitingOn}</p>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="panel p-4 sm:p-5">
@@ -333,6 +361,35 @@ export default async function PosBookingPage({ params }: PageProps<"/pos/[shopId
                 <dd className="text-right text-foreground">{b.qcInspector?.name ?? "—"}</dd>
               </dl>
             </div>
+          </section>
+
+          <section className="panel p-4">
+            <h2 className="eyebrow mb-3 flex items-center gap-1.5">
+              <History className="size-3" /> Service history · {b.vehicle.plate}
+            </h2>
+            {history.length ? (
+              <ul className="space-y-2">
+                {history.map((h) => (
+                  <li key={h.id}>
+                    <Link
+                      href={`/pos/${shopId}/bookings/${h.id}`}
+                      className="flex items-start justify-between gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-surface-2"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-foreground">{h.serviceNames.join(", ")}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDateTime(h.createdAt)} · <span className="font-mono">{h.code}</span>
+                          {h.issues.length > 0 && " · had QC rework"}
+                        </span>
+                      </span>
+                      <StatusBadge status={h.status} />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">First visit for this vehicle at this shop.</p>
+            )}
           </section>
 
           <section className="panel p-5">

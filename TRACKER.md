@@ -106,7 +106,7 @@
 | P7-1 | In-app calling SA ↔ customer + call log | — | ☐ | LiveKit recommended; `CallLog` model ready |
 | P7-2 | AI Front Desk: Claude tool calling over caller's own bookings | — | ☐ | narrow tools; guardrailed |
 | P7-3 | AI call summary + SA task (mark done) | — | ☐ | `AiTask` model ready |
-| P7-4 | Stretch: invoice PDF / SSE live updates / analytics | — | ☐ | |
+| P7-4 | Stretch: invoice, vehicle history, owner analytics | AI | ☑ | printable invoice/job sheet (`/invoice/[id]`, print-safe in dark mode), service history per plate on the job page, revenue + avg turnaround + QC pass rate. SSE live updates still open |
 
 ## Housekeeping
 
@@ -119,6 +119,7 @@
 
 ## Activity Log  (newest first — append dated lines here for the record)
 
+- **2026-10-09 (AI):** Extras from brief §8.3: printable invoice/job sheet (customer + staff, access-checked, light palette when printing), vehicle service history by plate, owner revenue + average turnaround. Covered by the lifecycle E2E (35 unit tests now). Full run from a fresh seed earlier: Vitest 34/34, Playwright 29/29.
 - **2026-10-09 (AI):** Core product built and tested. State machine (21 actions, party guards) + RBAC/tenant isolation + workflow services (transactions, compare-and-set, audit log, stock ledger); schema migration `workflow_core`; idempotent seed driving demo bookings through the real services. UI: POS shell (switcher, role nav, bell), role overviews, job page with role-aware action panel + estimate editor, bookings list, QC queue, inventory, POs, team, services, settings, create shop; customer wizard + portal; light/dark toggle; landing search/filter. REST API with 401/403/404/409/422. Tests: Vitest 34 + Playwright (Chrome) lifecycle/security/owner/public — found and fixed a concurrent first-booking slot race (500 → 409), a wizard default-day issue and lost deep links after login. ▶ Next: deploy (P0-5/6), H-1/H-2, bonus.
 - **2026-10-09 (AI):** Shipped the brand + first UI: design system, cinematic landing with live shop directory, login + owner signup. `pnpm build` green.
 - **2026-10-09 (AI):** Neon connected, migrated and seeded. Demo password `password123`.
