@@ -114,20 +114,22 @@ export async function getStaffShops(userId: string) {
   const [owned, memberships] = await Promise.all([
     prisma.shop.findMany({
       where: { ownerId: userId },
-      select: { id: true, name: true, city: true },
-      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, city: true, createdAt: true },
     }),
     prisma.membership.findMany({
       where: { userId, active: true },
-      select: { role: true, shop: { select: { id: true, name: true, city: true } } },
+      select: { role: true, shop: { select: { id: true, name: true, city: true, createdAt: true } } },
     }),
   ]);
-  const byId = new Map<string, { id: string; name: string; city: string; roles: ShopRole[] }>();
+  type Entry = { id: string; name: string; city: string; createdAt: Date; roles: ShopRole[] };
+  const byId = new Map<string, Entry>();
   for (const s of owned) byId.set(s.id, { ...s, roles: ["OWNER"] });
   for (const m of memberships) {
     const entry = byId.get(m.shop.id) ?? { ...m.shop, roles: [] };
     entry.roles.push(m.role);
     byId.set(m.shop.id, entry);
   }
-  return [...byId.values()];
+  return [...byId.values()]
+    .sort((a, b) => +a.createdAt - +b.createdAt)
+    .map(({ createdAt: _c, ...s }) => s);
 }

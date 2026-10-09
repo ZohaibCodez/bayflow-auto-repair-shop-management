@@ -7,13 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+// Seeded demo accounts (see README / prisma/seed.ts). UI convenience only — no auth logic.
 const DEMO = [
   { label: "Owner", email: "owner@bayflow.test" },
-  { label: "Customer", email: "customer@bayflow.test" },
   { label: "Advisor", email: "sa.lahore@bayflow.test" },
+  { label: "Technician", email: "tech.lahore@bayflow.test" },
+  { label: "Parts", email: "parts.lahore@bayflow.test" },
+  { label: "QC", email: "qc.lahore@bayflow.test" },
+  { label: "Customer", email: "customer@bayflow.test" },
 ];
 
-export function LoginForm({ registered }: { registered?: boolean }) {
+/** Only same-site relative paths are allowed as a post-login destination. */
+const safeCallback = (url?: string) =>
+  url && url.startsWith("/") && !url.startsWith("//") ? url : "/dashboard";
+
+export function LoginForm({ registered, callbackUrl }: { registered?: boolean; callbackUrl?: string }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +34,7 @@ export function LoginForm({ registered }: { registered?: boolean }) {
     const res = await signIn("credentials", { email, password, redirect: false });
     setLoading(false);
     if (res?.error) setError("That email and password don't match an account.");
-    else window.location.href = "/";
+    else window.location.href = safeCallback(callbackUrl);
   }
 
   return (

@@ -27,6 +27,11 @@
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-line: var(--line);
+  /* status signal tones (booking pipeline) */
+  --color-signal-blue: var(--signal-blue);
+  --color-signal-violet: var(--signal-violet);
+  --color-signal-cyan: var(--signal-cyan);
+  --color-signal-red: var(--signal-red);
 
   --color-ring: var(--ring);
   --color-input: var(--input);
@@ -65,6 +70,10 @@
   --amber-fg: #1a1205;
   --teal: #2fd4a7;
   --steel: #aeb9c6;
+  --signal-blue: #6aa6ff;
+  --signal-violet: #b794ff;
+  --signal-cyan: #45c8e8;
+  --signal-red: #f26d6d;
 
   --radius: 0.5rem;
 
@@ -141,6 +150,52 @@
   .amber-glow {
     background: radial-gradient(60% 50% at 20% 0%, color-mix(in oklab, var(--amber) 22%, transparent), transparent 70%);
   }
+  /* small uppercase instrument label */
+  .eyebrow {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted-fg);
+  }
+  /* hairline panel used across the POS */
+  .panel {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: calc(var(--radius) * 1.5);
+  }
+  .panel-inset {
+    border: 1px solid color-mix(in oklab, var(--line) 80%, transparent);
+    background: var(--surface-2);
+    border-radius: var(--radius);
+  }
+  /* live "pulse" dot for active states */
+  .pulse-dot {
+    position: relative;
+  }
+  .pulse-dot::after {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: 9999px;
+    background: currentColor;
+    opacity: 0.35;
+    animation: bay-pulse 1.8s ease-out infinite;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@keyframes bay-pulse {
+  0% { transform: scale(0.6); opacity: 0.45; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+
+/* thin, dark scrollbars inside the POS */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {
