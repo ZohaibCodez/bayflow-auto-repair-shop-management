@@ -1,37 +1,42 @@
 import Link from "next/link";
-import { format } from "date-fns";
 import { prisma } from "@/lib/db";
+import { slotStartsFor, type WorkingHours } from "@/lib/slots";
+import { addDaysToKey, formatDay, formatTime, shopDateKey } from "@/lib/time";
 import { Button } from "@/components/ui/button";
 import { SiteNav } from "@/components/marketing/site-nav";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { Hero } from "@/components/marketing/hero";
 import { Lifecycle } from "@/components/marketing/lifecycle";
-import { ShopCard, type ShopCardData } from "@/components/marketing/shop-card";
+import type { ShopCardData } from "@/components/marketing/shop-card";
+import { ShopDirectory } from "@/components/marketing/shop-directory";
 
 export const dynamic = "force-dynamic";
 
+/** First slot start in the coming week from working hours (shop time), at least 30 min out. */
+function nextOpening(hours: WorkingHours, durationMin: number): string | null {
+  const cutoff = Date.now() + 30 * 60_000;
+  let key = shopDateKey();
+  for (let i = 0; i < 7; i++, key = addDaysToKey(key, 1)) {
+    const next = slotStartsFor(hours, key, durationMin).find((s) => s.getTime() > cutoff);
+    if (next) return `${i === 0 ? "today" : i === 1 ? "tomorrow" : formatDay(next).split(" ")[0]} ${formatTime(next)}`;
+  }
+  return null;
+}
+
 async function getShops(): Promise<ShopCardData[]> {
   const shops = await prisma.shop.findMany({
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ rating: { sort: "desc", nulls: "last" } }, { createdAt: "asc" }],
     include: { services: { where: { active: true }, select: { name: true } } },
   });
 
-  const now = new Date();
-  const nextSlots = await Promise.all(
-    shops.map((s) =>
-      prisma.slot.findFirst({
-        where: { shopId: s.id, startsAt: { gt: now } },
-        orderBy: { startsAt: "asc" },
-      }),
-    ),
-  );
-
-  return shops.map((s, i) => ({
+  return shops.map((s) => ({
     id: s.id,
     name: s.name,
     city: s.city,
+    description: s.description,
+    rating: s.rating,
     serviceNames: s.services.map((v) => v.name),
-    nextSlotLabel: nextSlots[i] ? format(nextSlots[i]!.startsAt, "EEE HH:mm") : null,
+    nextSlotLabel: nextOpening(s.workingHours as WorkingHours, s.slotDurationMin),
   }));
 }
 
@@ -59,11 +64,7 @@ export default async function Home() {
               </div>
             </div>
 
-            <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {shops.map((shop) => (
-                <ShopCard key={shop.id} shop={shop} />
-              ))}
-            </div>
+            <ShopDirectory shops={shops} />
           </div>
         </section>
 

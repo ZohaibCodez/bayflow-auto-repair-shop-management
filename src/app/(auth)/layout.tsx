@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
@@ -34,12 +35,15 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           <Link href="/" className="lg:hidden">
             <Logo />
           </Link>
-          <Link
-            href="/"
-            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Back to home
-          </Link>
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+            <Link
+              href="/"
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Back to home
+            </Link>
+          </div>
         </div>
         <main className="grid flex-1 place-items-center px-6 py-12">{children}</main>
       </div>

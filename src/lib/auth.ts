@@ -10,7 +10,10 @@ const credentialsSchema = z.object({
 });
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  session: { strategy: "jwt" },
+  session: {
+    strategy: "jwt",
+    maxAge: (Number(process.env.AUTH_SESSION_DAYS) || 7) * 24 * 60 * 60,
+  },
   trustHost: true,
   pages: { signIn: "/login" },
   providers: [
@@ -20,7 +23,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
 
-        const { email, password } = parsed.data;
+        const email = parsed.data.email.toLowerCase();
+        const { password } = parsed.data;
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user) return null;
 

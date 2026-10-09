@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 export function SiteFooter() {
   return (
@@ -12,7 +13,8 @@ export function SiteFooter() {
             on the car.
           </p>
         </div>
-        <div className="flex flex-wrap gap-x-8 gap-y-2 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-muted-foreground">
+          <ThemeToggle />
           <Link href="/#shops" className="hover:text-foreground">
             Find a shop
           </Link>

@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/brand/logo";
 import { signOutAction } from "@/server/actions/auth";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { ShopSwitcher, type SwitcherShop } from "./shop-switcher";
 
 const ICONS: Record<string, LucideIcon> = {
@@ -179,7 +180,11 @@ export function MobileNav({ groups, shops, currentShopId, user, bell }: Props & 
             <div className="flex-1 overflow-y-auto px-3 py-6">
               <NavLinks groups={groups} onNavigate={() => setOpen(false)} />
             </div>
-            <div className="p-3">
+            <div className="space-y-3 p-3">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs text-muted-foreground">Theme</span>
+                <ThemeToggle />
+              </div>
               <UserCard {...user} />
             </div>
           </div>

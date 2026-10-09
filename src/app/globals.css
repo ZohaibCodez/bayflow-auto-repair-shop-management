@@ -57,23 +57,26 @@
   --radius-2xl: calc(var(--radius) * 1.8);
 }
 
+/* Light palette ("workshop daylight"): paper-white bays, graphite type, a deeper amber
+   so it still reads as text on white. The dark palette below is the original brand. */
 :root {
-  /* raw brand palette */
-  --ink: #0e1218;
-  --surface: #141b24;
-  --surface-2: #1b2531;
-  --line: #28333f;
-  --fg: #e7ecf2;
-  --muted-fg: #93a0af;
-  --amber: #ffb224;
-  --amber-deep: #e8930c;
+  color-scheme: light;
+  --ink: #f4f6f9;
+  --surface: #ffffff;
+  --surface-2: #eef1f5;
+  --line: #dbe1e8;
+  --fg: #111821;
+  --muted-fg: #5b6878;
+  --amber: #d98300;
+  --amber-deep: #b86d00;
   --amber-fg: #1a1205;
-  --teal: #2fd4a7;
-  --steel: #aeb9c6;
-  --signal-blue: #6aa6ff;
-  --signal-violet: #b794ff;
-  --signal-cyan: #45c8e8;
-  --signal-red: #f26d6d;
+  --teal: #0c9a72;
+  --steel: #475565;
+  --signal-blue: #2c6bd6;
+  --signal-violet: #7646d8;
+  --signal-cyan: #0b87a8;
+  --signal-red: #d23f3f;
+  --shadow-panel: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.06);
 
   --radius: 0.5rem;
 
@@ -92,7 +95,7 @@
   --muted-foreground: var(--muted-fg);
   --accent: var(--surface-2);
   --accent-foreground: var(--fg);
-  --destructive: #f25555;
+  --destructive: #d23f3f;
   --border: var(--line);
   --input: var(--line);
   --ring: var(--amber);
@@ -103,9 +106,25 @@
   --chart-5: #c084fc;
 }
 
-/* The product is dark-first; keep .dark identical so shadcn's dark: variants behave. */
+/* Dark palette ("the service bay, instrumented") — toggled by next-themes via `.dark`. */
 .dark {
   color-scheme: dark;
+  --ink: #0e1218;
+  --surface: #141b24;
+  --surface-2: #1b2531;
+  --line: #28333f;
+  --fg: #e7ecf2;
+  --muted-fg: #93a0af;
+  --amber: #ffb224;
+  --amber-deep: #e8930c;
+  --teal: #2fd4a7;
+  --steel: #aeb9c6;
+  --signal-blue: #6aa6ff;
+  --signal-violet: #b794ff;
+  --signal-cyan: #45c8e8;
+  --signal-red: #f26d6d;
+  --destructive: #f25555;
+  --shadow-panel: none;
 }
 
 @layer base {
@@ -113,7 +132,6 @@
     @apply border-border;
   }
   html {
-    color-scheme: dark;
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
   }
@@ -163,6 +181,7 @@
     border: 1px solid var(--line);
     background: var(--surface);
     border-radius: calc(var(--radius) * 1.5);
+    box-shadow: var(--shadow-panel);
   }
   .panel-inset {
     border: 1px solid color-mix(in oklab, var(--line) 80%, transparent);

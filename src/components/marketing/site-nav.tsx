@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { getCurrentUser } from "@/lib/rbac";
 
-export function SiteNav() {
+export async function SiteNav() {
+  const user = await getCurrentUser();
   return (
     <header className="fixed inset-x-0 top-0 z-50">
       <div className="border-b border-line/70 bg-ink/70 backdrop-blur-xl">
@@ -24,9 +27,16 @@ export function SiteNav() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button render={<Link href="/login" />} variant="ghost" size="sm">
-              Sign in
-            </Button>
+            <ThemeToggle className="hidden sm:inline-flex" />
+            {user ? (
+              <Button render={<Link href="/dashboard" />} variant="ghost" size="sm">
+                Dashboard
+              </Button>
+            ) : (
+              <Button render={<Link href="/login" />} variant="ghost" size="sm">
+                Sign in
+              </Button>
+            )}
             <Button render={<Link href="/#shops" />} size="sm">
               Book a service
             </Button>

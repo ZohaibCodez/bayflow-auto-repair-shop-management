@@ -28,7 +28,8 @@ export async function signupOwner(
     return { error: parsed.error.issues[0]?.message ?? "Please check your details." };
   }
 
-  const { name, email, password } = parsed.data;
+  const { name, password } = parsed.data;
+  const email = parsed.data.email.toLowerCase();
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
@@ -38,5 +39,6 @@ export async function signupOwner(
   const passwordHash = await bcrypt.hash(password, 10);
   await prisma.user.create({ data: { name, email, passwordHash } });
 
-  redirect("/login?registered=1");
+  // New owners land on "create your first shop" after signing in.
+  redirect("/login?registered=1&callbackUrl=%2Fpos%2Fnew");
 }

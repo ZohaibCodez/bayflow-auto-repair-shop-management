@@ -1,42 +1,95 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
 import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/rbac";
+import { addDaysToKey, dayKeyOf, shopDateKey, shopTime } from "@/lib/time";
+import type { WorkingHours } from "@/lib/slots";
 import { Logo } from "@/components/brand/logo";
-import { Button } from "@/components/ui/button";
+import { BookingWizard } from "@/components/booking/booking-wizard";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 export const dynamic = "force-dynamic";
 
-export default async function BookPage(props: PageProps<"/book/[shopId]">) {
-  const { shopId } = await props.params;
-  const shop = await prisma.shop.findUnique({
-    where: { id: shopId },
-    select: { name: true, city: true },
-  });
+const fmt = (opts: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Karachi", ...opts });
+
+export async function generateMetadata({ params }: PageProps<"/book/[shopId]">) {
+  const { shopId } = await params;
+  const shop = await prisma.shop.findUnique({ where: { id: shopId }, select: { name: true } });
+  return { title: shop ? `Book ${shop.name} — BayFlow` : "Book a service — BayFlow" };
+}
+
+export default async function BookPage({ params }: PageProps<"/book/[shopId]">) {
+  const { shopId } = await params;
+  const [shop, user] = await Promise.all([
+    prisma.shop.findUnique({
+      where: { id: shopId },
+      select: {
+        id: true,
+        name: true,
+        city: true,
+        address: true,
+        rating: true,
+        workingHours: true,
+        services: {
+          where: { active: true },
+          orderBy: { name: "asc" },
+          select: { id: true, name: true, description: true, durationMin: true, basePrice: true },
+        },
+      },
+    }),
+    getCurrentUser(),
+  ]);
   if (!shop) notFound();
 
+  const vehicles = user
+    ? await prisma.vehicle.findMany({
+        where: { customerId: user.id },
+        select: { id: true, plate: true, make: true, model: true, year: true },
+        orderBy: { year: "desc" },
+      })
+    : [];
+
+  // The next 14 shop-local days, flagged open/closed from working hours.
+  const hours = shop.workingHours as WorkingHours;
+  const today = shopDateKey();
+  const days = Array.from({ length: 14 }, (_, i) => {
+    const key = addDaysToKey(today, i);
+    const noon = shopTime(key, "12:00");
+    return {
+      key,
+      weekday: fmt({ weekday: "short" }).format(noon),
+      day: fmt({ day: "numeric" }).format(noon),
+      month: fmt({ month: "short" }).format(noon),
+      open: Boolean(hours[dayKeyOf(key)]),
+    };
+  });
+
   return (
-    <main className="relative grid min-h-screen place-items-center overflow-hidden px-6">
-      <div className="pointer-events-none absolute inset-0 bay-grid" aria-hidden />
-      <div className="relative w-full max-w-md text-center">
-        <Link href="/" className="inline-flex">
-          <Logo />
-        </Link>
-        <h1 className="mt-10 font-display text-3xl text-foreground">
-          Booking {shop.name}
-        </h1>
-        <p className="mt-3 text-muted-foreground">
-          The booking wizard — services, time slot and vehicle details — is the next
-          build step. For now, the shop is live in {shop.city}.
-        </p>
-        <div className="mt-8 flex justify-center gap-3">
-          <Button render={<Link href="/#shops" />} variant="outline" className="h-10 px-5">
-            Browse shops
-          </Button>
-          <Button render={<Link href="/login" />} className="h-10 px-5">
-            Sign in
-          </Button>
+    <div className="relative min-h-screen">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bay-grid opacity-60" aria-hidden />
+      <header className="relative border-b border-line/70 bg-ink/70 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+          <Link href="/" aria-label="BayFlow home">
+            <Logo />
+          </Link>
+          <div className="flex items-center gap-4">
+            <ThemeToggle className="hidden sm:inline-flex" />
+            <Link href="/#shops" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+              <ChevronLeft className="size-4" /> All shops
+            </Link>
+          </div>
         </div>
-      </div>
-    </main>
+      </header>
+      <main className="relative mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:py-14">
+        <BookingWizard
+          shop={{ id: shop.id, name: shop.name, city: shop.city, address: shop.address, rating: shop.rating }}
+          services={shop.services}
+          days={days}
+          user={user ? { name: user.name, email: user.email } : null}
+          vehicles={vehicles}
+        />
+      </main>
+    </div>
   );
 }
