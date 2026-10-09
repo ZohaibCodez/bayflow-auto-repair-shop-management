@@ -97,7 +97,7 @@ const SHOPS: ShopDef[] = [
   },
 ];
 
-/** Cover photo per seeded shop (public/images/shops/*.webp — optional, see docs/IMAGE-PROMPTS.md). */
+/** Cover photo per seeded shop (public/images/shops/*.png — optional, see docs/IMAGE-PROMPTS.md). */
 const COVER: Record<string, string> = {
   lahore: "lahore",
   karachi: "karachi",
@@ -209,7 +209,7 @@ async function main() {
       phone: def.phone,
       description: def.description,
       rating: def.rating,
-      coverImage: `/images/shops/${COVER[def.slug]}.webp`,
+      coverImage: `/images/shops/${COVER[def.slug]}.png`,
       workingHours: DEFAULT_WORKING_HOURS,
       slotDurationMin: 60,
       slotCapacity: 2,
