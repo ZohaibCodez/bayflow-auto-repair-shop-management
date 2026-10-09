@@ -6,6 +6,7 @@ import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notifications/bell";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { LiveRefresh } from "@/components/live-refresh";
 import { signOutAction } from "@/server/actions/auth";
 
 export default async function AccountLayout({ children }: LayoutProps<"/account">) {
@@ -47,6 +48,7 @@ export default async function AccountLayout({ children }: LayoutProps<"/account"
         </div>
       </header>
       <main className="relative mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-12">{children}</main>
+      <LiveRefresh query="mine=1" />
       <footer className="border-t border-line/60 py-6">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 text-xs text-muted-foreground sm:px-6">
           <span>Signed in as {user.email}</span>

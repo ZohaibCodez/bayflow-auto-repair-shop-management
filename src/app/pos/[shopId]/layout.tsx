@@ -4,6 +4,7 @@ import { getStaffShops, hasShopRole, requireShopAccess } from "@/lib/rbac";
 import { NotificationBell } from "@/components/notifications/bell";
 import { MobileNav, Sidebar, type NavGroup } from "@/components/pos/sidebar";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { LiveRefresh } from "@/components/live-refresh";
 
 export default async function PosShopLayout({ children, params }: LayoutProps<"/pos/[shopId]">) {
   const { shopId } = await params;
@@ -78,6 +79,7 @@ export default async function PosShopLayout({ children, params }: LayoutProps<"/
           <NotificationBell />
         </div>
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+        <LiveRefresh query={`shopId=${shopId}`} />
       </div>
     </div>
   );
