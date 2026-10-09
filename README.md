@@ -24,12 +24,15 @@ Next.js 16 (App Router) · TypeScript · Prisma + PostgreSQL (Neon) · Auth.js v
 
 ## Getting started (filled out during the build)
 
+**Windows quick start:** double-click **`run.bat`** (or run it in a terminal). It installs deps, creates `.env` from the example, generates the Prisma client, optionally migrates + seeds, and starts the dev server.
+
+Manual steps (any OS):
 ```bash
 # Prerequisites: Node 22+, pnpm 10+, a Neon Postgres DB
 pnpm install
-cp .env.example .env.local      # then fill in DATABASE_URL, DIRECT_URL, AUTH_SECRET
-pnpm prisma migrate dev          # create tables
-pnpm prisma db seed              # load demo shops, teams, inventory, slots
+cp .env.example .env      # then fill in DATABASE_URL, DIRECT_URL, AUTH_SECRET
+pnpm db:migrate                  # create tables
+pnpm db:seed                     # load demo shops, teams, inventory, slots
 pnpm dev                         # http://localhost:3000
 ```
 

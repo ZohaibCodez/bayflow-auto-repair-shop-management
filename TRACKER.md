@@ -11,8 +11,8 @@
 **Status legend:** `☐ Todo` · `◐ Doing` · `☑ Done` · `⊘ Blocked`
 **Owners:** `Z` Zohaib · `T` Teammate · `AI` Claude · `—` unassigned
 
-**Current focus:** ▶ **Phase 0 — app scaffolded & building; deploy + DB pending on Zohaib's accounts**
-**Last updated:** 2026-10-09 (by AI) — Next 16 app scaffolded, Prisma schema + client, Auth.js skeleton, shadcn/ui; build green.
+**Current focus:** ▶ **Phase 0 — DB live & seeded on Neon; only Vercel/GitHub deploy (P0-5/6) left. Ready for Phase 1.**
+**Last updated:** 2026-10-09 (by AI) — Neon DB migrated + seeded (3 shops, 14 users, 168 slots); build green.
 
 ---
 
@@ -20,7 +20,7 @@
 
 | Phase | Theme | Tasks done | Status |
 |---|---|---|---|
-| 0 | Foundation & first deploy | 4 / 6 | ▶ code done; deploy+DB pending user |
+| 0 | Foundation & first deploy | 5 / 6 | ▶ DB live + seeded; Vercel/GitHub deploy (P0-5/6) left |
 | 1 | Auth & multi-tenancy | 0 / 5 | ☐ |
 | 2 | Public portal & booking creation | 0 / 4 | ☐ |
 | 3 | State machine end-to-end | 0 / 5 | ☐ |
@@ -37,13 +37,13 @@
 |---|---|---|---|---|
 | P0-1 | Scaffold Next 16 app + Tailwind 4 + ESLint | AI | ☑ | Next 16.4.0, React 19.3, TS, App Router, Turbopack, src/, `@/*` |
 | P0-2 | Init shadcn/ui + base components | AI | ☑ | base-nova style; button/input/label/card/badge/table/dialog/dropdown/select/sonner/separator/tabs |
-| P0-3 | Prisma schema + client + `db.ts` singleton + seed | AI | ☑ | full data model; **Prisma pinned to 6.19.3** (v7 dropped `url` from schema). `pnpm db:migrate` + `db:seed` pending Neon URL |
+| P0-3 | Prisma schema + client + `db.ts` singleton + seed | AI | ☑ | full data model; **Prisma pinned to 6.19.3** (v7 dropped `url` from schema). ✓ migrated + seeded to **Neon** (3 shops, 14 users, 168 slots). Env uses `.env` (Prisma reads it; Next too) |
 | P0-4 | Auth.js v5 skeleton (credentials + JWT) + login shell | AI | ☑ | `src/lib/auth.ts`, `/api/auth/[...]`, `/login`, type augmentation |
 | P0-5 | **Deploy to Vercel → live URL** | Z | ⊘ | needs Zohaib's Vercel + Neon accounts (see handoff) |
 | P0-6 | Public GitHub repo + Vercel auto-deploy on push | Z | ⊘ | gh CLI not installed — create repo on github.com |
 
 **Done when:** live URL loads, DB connects, one test user can log in.
-**⚠ Note:** `next build` passes now. DB migrate/seed and deploy need Zohaib's free Neon + Vercel accounts.
+**⚠ Note:** `next build` passes; **Neon DB is live + seeded**. Only remaining P0 item is the Vercel/GitHub deploy (P0-5/6), which needs Zohaib's accounts.
 
 ## Phase 1 — Auth & multi-tenancy  (Z lead)
 
@@ -126,5 +126,6 @@
 
 ## Activity Log  (newest first — append dated lines here for the record)
 
+- **2026-10-09 (AI):** Neon connected. Standardized env on `.env` (Prisma CLI reads `.env`, not `.env.local`). Ran `prisma migrate dev --name init` → tables created on Neon; `db:seed` → 3 shops / 14 users / 12 memberships / 12 services / 168 slots / 12 inventory / 1 vehicle. Verified via live count query. Demo password `password123`. ▶ Next: Phase 1, and Zohaib to do Vercel+GitHub (P0-5/6).
 - **2026-10-09 (AI):** Phase 0 code done — scaffolded Next 16.4 app (TS/Tailwind4/App Router/src), full Prisma schema + client + `db.ts` + idempotent `seed.ts` (3 shops, teams, inventory, slots, demo customer), Auth.js v5 credentials skeleton + `/login`, shadcn/ui (12 components). Pinned Prisma to 6.19.3 (v7 removed `url` from schema). `pnpm build` passes. ▶ Next (Zohaib): create Neon DB + Vercel project for P0-5/P0-6, then Phase 1.
 - **2026-10-09 (AI):** Repo cleaned (CTF track removed, brief → `docs/`), `.gitignore` added, stack locked (`STACK.md`), build plan written (`PLAN.md`), this tracker created. ▶ Next: P0-1 scaffold.
