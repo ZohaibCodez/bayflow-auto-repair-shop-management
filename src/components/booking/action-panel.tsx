@@ -47,7 +47,7 @@ type Requirement = {
   onOrder: number;
   shortfall: number;
 };
-type OpenPO = {
+export type OpenPO = {
   id: string;
   status: string;
   supplier: string | null;
@@ -179,7 +179,7 @@ function RequirementTable({ rows }: { rows: Requirement[] }) {
   );
 }
 
-function ReceiveForm({ shopId, po }: { shopId: string; po: OpenPO }) {
+export function ReceiveForm({ shopId, po }: { shopId: string; po: OpenPO }) {
   const { pending, exec } = useAction();
   const [qty, setQty] = useState<Record<string, number>>(() =>
     Object.fromEntries(po.items.map((i) => [i.id, i.qtyOrdered - i.qtyReceived])),
