@@ -12,6 +12,7 @@
 - **Shop staff** — Service Advisor, Technician, Parts Person, QC Inspector — each get a dashboard that shows only their own work, and can only perform their own steps.
 - **Owners** run several shops, each with its own team, services, slots and inventory, and switch between them in one click.
 - **Every step is accountable**: each status change is written to an audit log (who, role, when, from → to, note), and the people involved are notified in-app.
+- **Extras**: printable invoice / job sheet, vehicle service history by plate, owner analytics (revenue, turnaround, QC pass rate, bookings by stage), light & dark themes.
 
 ## Tech stack
 
@@ -151,6 +152,7 @@ src/
     pos/[shopId]/                POS: overview, bookings, job page, qc, inventory,
                                  purchase-orders, team, services, settings
     pos/new/                     create a shop
+    invoice/[bookingId]/         printable invoice / job sheet
     api/                         REST endpoints (see below)
   lib/
     booking/state-machine.ts     ★ single source of truth for the lifecycle
