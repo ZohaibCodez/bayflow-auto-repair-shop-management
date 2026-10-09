@@ -58,3 +58,8 @@ Thumbs.db
 # Misc
 .cache/
 tmp/
+
+# Local-only files dropped into docs/ (contain secrets / unrelated CTF material)
+docs/Requirement.txt
+docs/Web-*/
+docs/Web-*.zip
