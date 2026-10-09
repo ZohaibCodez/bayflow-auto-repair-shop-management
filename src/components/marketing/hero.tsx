@@ -131,7 +131,7 @@ export function Hero({ shopCount }: { shopCount: number }) {
             </div>
 
             <ul
-              className="mt-9 grid max-w-xl gap-x-5 gap-y-4 opacity-0 sm:grid-cols-3 short:lg:mt-6"
+              className="mt-9 grid max-w-xl gap-x-5 gap-y-4 opacity-0 sm:grid-cols-3 short:lg:mt-6 [@media(max-height:620px)]:lg:hidden"
               style={{ animation: "hero-in .8s cubic-bezier(.16,1,.3,1) .72s forwards" }}
             >
               {TRUST.map(({ icon: Icon, title, detail }) => (

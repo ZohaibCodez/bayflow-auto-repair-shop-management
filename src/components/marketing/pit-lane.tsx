@@ -103,14 +103,16 @@ export function PitLane() {
           }}
         />
 
-        <div className="relative mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pt-24 pb-8 sm:px-6 lg:pt-28">
+        {/* The stage is exactly one viewport tall and clips, so on short screens
+            everything above the lane gives way — the lane must never be cut off. */}
+        <div className="relative mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col px-4 pt-24 pb-8 sm:px-6 lg:pt-28 short:pb-4 short:lg:pt-24">
           {/* ---- Section head ---- */}
           <div className="flex items-start justify-between gap-6">
             <div className="max-w-xl">
               <h2 className="font-display-md text-[clamp(1.5rem,2.6vw,2rem)] text-foreground">
                 How a repair flows
               </h2>
-              <p className="mt-3 max-w-[48ch] text-sm text-muted-foreground sm:text-base">
+              <p className="mt-3 max-w-[48ch] text-sm text-muted-foreground sm:text-base short:mt-2 short:sm:text-sm shorter:hidden">
                 Seven bays, in a fixed order. Each one has exactly one person responsible, and
                 nothing jumps the queue — so the car&rsquo;s status is never a guess.
               </p>
@@ -122,7 +124,7 @@ export function PitLane() {
           </div>
 
           {/* ---- Active bay ---- */}
-          <div className="mt-6 min-h-0 flex-1 lg:mt-8">
+          <div className="mt-6 min-h-0 flex-1 lg:mt-8 short:mt-4 short:lg:mt-5">
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={step.label}
@@ -130,7 +132,7 @@ export function PitLane() {
                 animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                 exit={reduce ? { opacity: 0 } : { opacity: 0, y: -24, filter: "blur(8px)" }}
                 transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
-                className="grid h-full gap-7 sm:grid-cols-[1.05fr_0.95fr] lg:gap-14"
+                className="grid h-full gap-7 sm:grid-cols-[1.05fr_0.95fr] sm:grid-rows-[minmax(0,1fr)] lg:gap-14"
               >
                 <div className="self-center">
                   <span
@@ -144,20 +146,23 @@ export function PitLane() {
                     <span className="size-1.5 rounded-full" style={{ background: accent }} />
                     {step.owner}
                   </span>
-                  <h3 className="display mt-4 text-[clamp(1.9rem,4.4vw,3rem)] text-foreground">
+                  <h3 className="display mt-4 text-[clamp(1.9rem,4.4vw,3rem)] text-foreground short:mt-3 short:text-[clamp(1.6rem,min(4.4vw,7vh),3rem)]">
                     {step.label}
                   </h3>
-                  <p className="mt-4 max-w-[44ch] text-base leading-relaxed text-steel sm:text-lg">
+                  <p className="mt-4 max-w-[44ch] text-base leading-relaxed text-steel sm:text-lg short:mt-3 short:sm:text-base">
                     {step.blurb}
                   </p>
                 </div>
 
-                <div className="relative h-full min-h-56 overflow-hidden rounded-2xl border border-line/80 bg-surface shadow-2xl shadow-black/25">
+                <div className="relative h-full min-h-56 overflow-hidden rounded-2xl border border-line/80 bg-surface shadow-2xl shadow-black/25 short:sm:min-h-0">
+                  {/* Absolutely placed so the photo fills the space the layout leaves it
+                      instead of sizing the bay from its own aspect ratio, which pushed
+                      the lane off the bottom of the screen. */}
                   <FallbackImage
                     src={IMAGES.lifecycle[index] ?? ""}
                     alt=""
-                    className="size-full object-cover"
-                    fallback={<div className="size-full bay-floor opacity-60" aria-hidden />}
+                    className="absolute inset-0 size-full object-cover"
+                    fallback={<div className="absolute inset-0 bay-floor opacity-60" aria-hidden />}
                   />
                   <span
                     className="pointer-events-none absolute inset-x-0 bottom-0 h-px"
@@ -174,7 +179,7 @@ export function PitLane() {
               All seven bays stay on screen and labelled, so the sequence is
               readable at a glance (and to a screen reader) without scrolling
               through it. */}
-          <ol className="relative mt-8 h-20 lg:mt-10">
+          <ol className="relative mt-8 h-20 shrink-0 lg:mt-10 short:mt-4 short:h-16 short:lg:mt-5">
             <span className="absolute inset-x-0 top-6 h-px bg-line" aria-hidden />
             <motion.span
               aria-hidden

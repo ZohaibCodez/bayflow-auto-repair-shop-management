@@ -45,23 +45,27 @@ test.describe("theme", () => {
     await page.goto("/login");
     const html = page.locator("html");
     await expect(html).toHaveClass(/dark/); // follows the OS until the user chooses
-    const toggle = page.getByRole("button", { name: /Switch to (light|dark) mode/ });
-    await expect(toggle).toHaveAccessibleName("Switch to light mode");
+    // The auth screens use the two-button sun/moon switch; the lit one is pressed.
+    const light = page.getByRole("button", { name: "Light theme" });
+    const dark = page.getByRole("button", { name: "Dark theme" });
+    await expect(dark).toHaveAttribute("aria-pressed", "true");
+    await expect(light).toHaveAttribute("aria-pressed", "false");
     const darkBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
 
-    await toggle.click();
+    await light.click();
     await expect(html).not.toHaveClass(/dark/);
+    await expect(light).toHaveAttribute("aria-pressed", "true");
     const lightBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
     expect(lightBg).not.toBe(darkBg);
 
     await page.reload();
     await expect(html).not.toHaveClass(/dark/); // persisted despite the dark OS setting
-    await page.getByRole("button", { name: "Switch to dark mode" }).click();
+    await page.getByRole("button", { name: "Dark theme" }).click();
     await expect(html).toHaveClass(/dark/);
 
-    // Icon is centred in the button.
-    const box = await page.getByRole("button", { name: /Switch to/ }).boundingBox();
-    const icon = await page.getByRole("button", { name: /Switch to/ }).locator("span").boundingBox();
+    // Icon is centred in its button.
+    const box = await dark.boundingBox();
+    const icon = await dark.locator("svg").boundingBox();
     expect(Math.abs(icon!.x + icon!.width / 2 - (box!.x + box!.width / 2))).toBeLessThan(1.5);
     expect(Math.abs(icon!.y + icon!.height / 2 - (box!.y + box!.height / 2))).toBeLessThan(1.5);
   });
