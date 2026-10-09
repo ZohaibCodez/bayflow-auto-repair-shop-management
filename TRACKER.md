@@ -11,8 +11,8 @@
 **Status legend:** `☐ Todo` · `◐ Doing` · `☑ Done` · `⊘ Blocked`
 **Owners:** `Z` Zohaib · `T` Teammate · `AI` Claude · `—` unassigned
 
-**Current focus:** ▶ **Core product is complete and tested (unit + Playwright E2E). Next: deploy to Vercel (P0-5/6), delete the 3 duplicate shops from the old seed, then the bonus track (P7).**
-**Last updated:** 2026-10-09 (by AI)
+**Current focus:** ▶ **Core + bonus are built and tested (unit + Playwright E2E). What's left is submission: deploy to Vercel (P0-5), make the GitHub repo public (P0-6), live smoke test (P6-5), rotate secrets (H-2), record the demo video (P7-5).**
+**Last updated:** 2026-10-10 (by AI)
 
 ---
 
@@ -27,7 +27,7 @@
 | 4 | Inventory & procurement | 3 / 3 | ☑ |
 | 5 | QC loop, notifications, dashboards | 4 / 4 | ☑ |
 | 6 | Seed, docs, hardening, deploy | 4 / 5 | ◐ final live deploy + smoke test left |
-| 7 | Bonus (calling / AI Front Desk) | 0 / 4 | ☐ unlocked — core is green |
+| 7 | Bonus (calling / AI Front Desk) | 4 / 5 | ◐ only the demo video left |
 
 ---
 
@@ -40,7 +40,7 @@
 | P0-3 | Prisma schema + client + `db.ts` + seed | AI | ☑ | Prisma pinned 6.19.3; Neon migrated (2 migrations) + seeded |
 | P0-4 | Auth.js v5 (credentials + JWT) + login | AI | ☑ | session lifetime from `AUTH_SESSION_DAYS`; emails case-insensitive |
 | P0-5 | **Deploy to Vercel → live URL** | Z | ⊘ | needs Zohaib's Vercel account — see README "Deployment" (set function region = Neon region) |
-| P0-6 | Public GitHub repo + auto-deploy on push | Z | ⊘ | Zohaib pushes (Claude commits locally only) |
+| P0-6 | Public GitHub repo + auto-deploy on push | Z | ⊘ | pushed, but the repo is still **private** (GitHub API returns Not Found unauthenticated) — the brief requires public. History checked: no secrets ever committed |
 
 ## Phase 1 — Auth & multi-tenancy  (Z lead)
 
@@ -103,9 +103,10 @@
 
 | ID | Task | Owner | Status | Notes |
 |---|---|---|---|---|
-| P7-1 | In-app calling SA ↔ customer + call log | — | ☐ | LiveKit recommended; `CallLog` model ready |
-| P7-2 | AI Front Desk: Claude tool calling over caller's own bookings | — | ☐ | narrow tools; guardrailed |
-| P7-3 | AI call summary + SA task (mark done) | — | ☐ | `AiTask` model ready |
+| P7-1 | In-app calling SA ↔ customer + call log | AI | ☑ | browser WebRTC, polled signalling (serverless-safe), ringing/connected/ended/missed/declined; call log on the booking + shop inbox; optional TURN via `NEXT_PUBLIC_TURN_*` |
+| P7-2 | AI Front Desk: tool calling over caller's own bookings | AI | ☑ | Groq (`openai/gpt-oss-120b`) → Claude → rule-based fallback; 4 caller-scoped tools; browser STT/TTS |
+| P7-3 | AI call summary + SA task (mark done) | AI | ☑ | `/pos/[shop]/calls`: summary, intent, sentiment, transcript, Mark done; sidebar badge; `e2e/frontdesk.spec.ts` 5/5 |
+| P7-5 | Demo video (3–5 min) incl. the AI Front Desk path | Z | ☐ | brief §8.3 evidence for the AI track; follow README "Bonus: calling and the AI Front Desk" |
 | P7-4 | Stretch: invoice, vehicle history, owner analytics | AI | ☑ | printable invoice/job sheet (`/invoice/[id]`, print-safe in dark mode), service history per plate on the job page, revenue + avg turnaround + QC pass rate. SSE live updates still open |
 
 ## Housekeeping
@@ -113,11 +114,13 @@
 | ID | Task | Owner | Status | Notes |
 |---|---|---|---|---|
 | H-1 | Delete the 3 duplicate shops from the old (non-idempotent) seed | Z | ☐ | they have no bookings; see the command in the session notes / ask Claude |
-| H-2 | Rotate the Neon password + `AUTH_SECRET` before the repo goes public | Z | ☐ | they were shared in chat and sit in `docs/Requirement.txt` (now git-ignored) |
+| H-2 | Rotate the Neon password + `AUTH_SECRET` (and the Groq key) before the repo goes public | Z | ☐ | all were shared in chat; they live only in the git-ignored `.env` / `docs/Requirement.txt` — never committed (history checked 2026-10-10) |
 
 ---
 
 ## Activity Log  (newest first — append dated lines here for the record)
+
+- **2026-10-10 (AI):** Bonus track finished against brief §8. The AI Front Desk now runs on **Groq** (`openai/gpt-oss-120b`, OpenAI-compatible tool calling; key in `.env` only) with Claude and the rule-based agent as fallbacks; summaries use a strict JSON schema and are zod-checked. Built the missing **SA section** `/pos/[shop]/calls` — AI follow-ups (summary, intent, sentiment, transcript, **Mark done**), recently done, shop call log — plus the call log on each job page and a "Calls & AI" sidebar badge (the AI_TASK notification already linked to this URL, which was a 404). New `e2e/frontdesk.spec.ts` (5/5): missed call → AI answers PKR 2,500 from the caller's booking → other customer 403 / other shop blocked → task → advisor marks done; technician locked out. Optional TURN relay env vars. `.env.example` + README now document the bonus and the variables actually read. UI: sign-in screen redesigned to one viewport with an isometric night-city SVG scene; hero gets a looping workshop video (photo fallback until it plays); hero stage strip and the "How a repair flows" car lane no longer fall off the bottom on short screens (verified 570–1080px tall). Fixed `e2e/public.spec.ts` for the new two-button theme switch.
 
 - **2026-10-09 (AI):** POS dashboard and auth screens redesigned. The overview was a wall of identical cards (six stat tiles, six lanes, four of them reading "Nothing waiting"); it is now three blocks that answer a question: a headline that states what needs you, a **Next up** queue ranked by how long each job has sat (with the action named as a verb), and **the floor** — every live car on the seven-phase pipeline, each carrying a shared `layoutId` so a job that changes status *travels* between bays on the next live refresh. Owner numbers became one instrument band; QC failures, declined estimates and low stock merged into one attention list that renders nothing when the shop is clean. New `lib/booking/queue.ts` owns the desk mapping and ranking as pure logic (exhaustive `Record<BookingStatus,…>`, so a new status fails the build until it is triaged) — covered by 13 new unit tests, 48 total. Auth: the left panel is now the live WebGL bay with the job card from the landing page, and the form gained icon fields, a reveal toggle, a Caps Lock warning, an orchestrated entrance, and one-click demo sign-in per role for judges. Fixed three real bugs: a function passed from a server to a client component, `.bay-floor` overflowing the viewport by 273px on phones, and `bg-ink` on the auth panel hiding the WebGL canvas behind it (negative z-index paints behind a parent's own background). Scoped the attention list to bookings the viewer may already see, so a technician never learns about another technician's QC failure. tsc + eslint + prettier clean.
 - **2026-10-09 (AI):** Landing page redesigned end to end. Hero is a lit service bay — a hand-written WebGL2 floor in perspective (no 3D library, one draw call, theme-aware, pauses off-screen) behind a full-measure headline that opens on Archivo's width axis, beside a pointer-tilted 3D job card that walks the 10 stages. New: odometer telemetry strip counted from the DB, scroll-scrubbed "pit lane" where the car is handed bay to bay, auto-cycling role panels (pause on hover/focus/off-screen), cursor-spotlight shop cards, scroll-aware nav with a travelling progress lamp, and a rebuilt footer carrying the demo-role table. Accessibility: new `--amber-ink`/`--teal-ink` text tokens fix amber failing contrast on light (2.9:1 → 6.5:1); reduced motion verified to leave nothing invisible; 0px horizontal overflow at 390px. Fixed a WebGL context-loss bug (cleanup called `loseContext()` while theme was an effect dep, so React's double-mount blanked the stage). `lifecycle.tsx`/`pipeline.tsx` superseded and removed. tsc + eslint + prettier clean; landing selectors used by `e2e/public.spec.ts` re-verified passing.

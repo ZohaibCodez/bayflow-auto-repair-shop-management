@@ -40,9 +40,22 @@ type Ctx = { startCall: (bookingId: string, label: string) => void; busy: boolea
 const CallContext = createContext<Ctx>({ startCall: () => {}, busy: false });
 export const useCalls = () => useContext(CallContext);
 
+/** Optional TURN relay, for callers behind strict NATs (mobile data, offices) where a
+    direct STUN-negotiated path can't be found. Inlined at build time. */
+const TURN: RTCIceServer[] = process.env.NEXT_PUBLIC_TURN_URL
+  ? [
+      {
+        urls: process.env.NEXT_PUBLIC_TURN_URL.split(",").map((u) => u.trim()),
+        username: process.env.NEXT_PUBLIC_TURN_USERNAME,
+        credential: process.env.NEXT_PUBLIC_TURN_CREDENTIAL,
+      },
+    ]
+  : [];
+
 const ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
   { urls: "stun:stun1.l.google.com:19302" },
+  ...TURN,
 ];
 
 async function api<T>(url: string, body?: unknown): Promise<T> {

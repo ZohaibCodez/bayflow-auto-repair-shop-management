@@ -2,7 +2,7 @@
 
 > Multi-tenant management platform for independent auto repair shops — a customer booking portal, a role-based shop POS, and a backend booking **state machine**. Built for **LoopVerse 3.0 — Web Dev (Virtual)**.
 
-**Live URL:** _added after the first Vercel deploy_ · **Status:** core lifecycle complete and tested end-to-end
+**Live URL:** _added after the first Vercel deploy_ · **Status:** core lifecycle complete and tested end-to-end · bonus track (in-app calling + AI Front Desk) built and tested
 
 ---
 
@@ -12,6 +12,7 @@
 - **Shop staff** — Service Advisor, Technician, Parts Person, QC Inspector — each get a dashboard that shows only their own work, and can only perform their own steps.
 - **Owners** run several shops, each with its own team, services, slots and inventory, and switch between them in one click.
 - **Every step is accountable**: each status change is written to an audit log (who, role, when, from → to, note), and the people involved are notified in-app.
+- **Bonus — in-app calling + AI Front Desk**: customer and service advisor call each other from the booking page (browser WebRTC, no phone numbers shared). If no advisor answers within 20 seconds, an AI voice agent takes the call, answers only from the caller's own bookings, and leaves the advisors a summary + task.
 - **Extras**: printable invoice / job sheet, vehicle service history by plate, owner analytics (revenue, turnaround, QC pass rate, bookings by stage), light & dark themes.
 
 ## Tech stack
@@ -50,7 +51,10 @@ cp .env.example .env
 | `AUTH_SECRET` | Signs session tokens. Generate with `npx auth secret`. |
 | `AUTH_SESSION_DAYS` | Sign-in lifetime in days (default 7). |
 | `NEXT_PUBLIC_APP_URL` | Base URL of the app. |
-| everything else | Optional / bonus — leave blank. Each variable is commented in `.env.example`. |
+| `GROQ_API_KEY` | *Optional.* Runs the AI Front Desk on Groq (`GROQ_MODEL`, default `openai/gpt-oss-120b`). Get one at console.groq.com. |
+| `ANTHROPIC_API_KEY` | *Optional.* Runs the AI Front Desk on Claude instead, when `GROQ_API_KEY` is blank. With neither key a rule-based agent answers, so the demo still works. |
+| `NEXT_PUBLIC_TURN_*` | *Optional.* A TURN relay for calls between strict networks (mobile data, offices). Calls work without it on most networks. |
+| everything else | Optional — leave blank. Each variable is commented in `.env.example`. |
 
 ### 3. Database
 
@@ -122,6 +126,15 @@ Every shop has a full team: `sa.<shop>`, `tech.<shop>`, `qc.<shop>`, `parts.<sho
 8. **Advisor** — notify the customer; **Customer** confirms pick-up → **COMPLETED**. The audit log on the job page shows every step.
 9. **Isolation** — sign in as `sa.karachi@bayflow.test` and request a Lahore booking: `GET /api/shops/<lahoreShopId>/bookings` → **403**.
 
+### Bonus: calling and the AI Front Desk (two browsers)
+
+Use two browser windows (or one normal + one private), allow the microphone when asked.
+
+1. **Window A — Customer** (`customer@bayflow.test`): open the Honda Civic booking → **Call the shop in-app**.
+2. **Window B — Advisor** (`sa.lahore@bayflow.test`, any POS page): an incoming-call popup rings → **Accept** and talk. Hang up — the call is logged on the booking with its duration. The advisor can also call the customer from the job page (**Call customer in-app**).
+3. **The AI path** — call again from window A, and this time let it ring for 20 seconds (or press **Decline** in B). The **AI Front Desk** picks up: speak, or type in the box. Ask *"what's the status of my car?"*, *"how much is the estimate?"* or *"can I move my appointment to Monday?"* — it answers from Ahmed's own booking only (the estimate is PKR 16,100, awaiting approval) and records reschedule / call-back requests. Press **End call**.
+4. **Window B** — the bell shows *AI Front Desk: …*; **Calls & AI** in the sidebar lists the follow-up: a task title, the AI's summary, intent, sentiment and the full transcript → **Mark done**. The same page has the shop's call log; the job page shows that booking's calls.
+
 ---
 
 ## Architecture
@@ -150,7 +163,8 @@ src/
     book/[shopId]/               booking wizard
     account/                     customer dashboard + booking page
     pos/[shopId]/                POS: overview, bookings, job page, qc, inventory,
-                                 purchase-orders, team, services, settings
+                                 purchase-orders, team, services, settings,
+                                 calls (AI follow-ups + call log)
     pos/new/                     create a shop
     invoice/[bookingId]/         printable invoice / job sheet
     api/                         REST endpoints (see below)
@@ -163,12 +177,14 @@ src/
     services/                    domain logic (no Next.js imports — reused by the seed)
       transition.ts              ★ the only code that writes Booking.status
       workflow.ts, parts.ts, bookings.ts, shops.ts
+      calls.ts                   call signalling (WebRTC offer/answer) + call log
+      frontdesk.ts               AI Front Desk: caller-scoped tools, Groq / Claude / rules
     actions/                     server actions (auth → service → refresh)
     queries/                     read models for pages
-  components/                    booking/, pos/, marketing/, ui/ (shadcn), theme/
+  components/                    booking/, calls/, pos/, marketing/, ui/ (shadcn), theme/
   proxy.ts                       optimistic login redirect (keeps deep links)
 prisma/  schema.prisma · migrations/ · seed.ts
-e2e/     Playwright: lifecycle, security, owner, public specs
+e2e/     Playwright: lifecycle, security, owner, public, frontdesk specs
 ```
 
 ### Key design decisions
@@ -180,6 +196,8 @@ e2e/     Playwright: lifecycle, security, owner, public specs
 - **Parts semantics.** Checking stock *reserves* what's on the shelf for the job; missing parts go on a purchase order; deliveries (full or partial) raise stock and are reserved for the job automatically; allocation hands them to the technician; cancelling before repair *releases* reservations back to stock.
 - **Estimates are versioned.** Every advisor edit bumps the revision; after a rejection the next version is a new row, so the rejected estimate (and the customer's reason) is kept. Approval/rejection is time-stamped.
 - **Money is whole PKR integers** — no floating-point totals.
+- **Calls need no media server.** Voice is browser-to-browser WebRTC; signalling is non-trickle (complete SDP offer/answer stored on the `CallLog` row, both sides poll), so it runs on serverless. The first advisor to answer wins by compare-and-set; an unanswered ring expires to *missed* after 20 s.
+- **The AI Front Desk can't overreach.** The caller is identified by their signed-in session, and its only tools (`list_my_bookings`, `get_booking_details`, `request_reschedule`, `request_callback`) are scoped to *that customer's* bookings at *that shop*. It can't approve, cancel or change anything, and is told to answer only from tool results. Speech-to-text and text-to-speech run in the browser. The post-call summary is schema-checked (zod) before it becomes a task; any model error falls back to the rule-based agent mid-call.
 
 ## REST API
 
@@ -197,6 +215,13 @@ All endpoints return JSON. Errors are `{ "error": { "code", "message" } }` with 
 | `GET /api/shops/:shopId/team` | owner, advisor | Team members |
 | `GET /api/shops/:shopId/inventory` | owner, parts | Stock levels |
 | `GET/POST /api/notifications` | signed in | Bell feed / mark read |
+| `POST /api/calls` | booking's customer, shop advisor | `{ bookingId, offer }` — start a call about a booking |
+| `GET /api/calls/incoming` | signed in | Calls ringing for you (popup) |
+| `GET /api/calls/:callId` | call parties | Call state (+ the answer SDP for the caller) |
+| `POST /api/calls/:callId/answer` · `/decline` · `/end` · `/missed` | call parties | Call lifecycle (first answer wins → 409 for the rest) |
+| `POST /api/calls/:callId/ai` | the calling customer | `{ text? }` — AI Front Desk greeting, then one turn per call |
+| `POST /api/calls/:callId/ai/end` | the calling customer | Hang up on the AI → summary + advisor task |
+| `POST /api/shops/:shopId/ai-tasks/:taskId/done` | owner, advisor | Mark an AI follow-up done |
 
 ## Tests
 
@@ -208,11 +233,12 @@ All endpoints return JSON. Errors are `{ "error": { "code", "message" } }` with 
 | `e2e/security.spec.ts` | 401s; **Shop-A staff → 403/404 on Shop-B**; owner isolation; technician sees only assigned jobs; customers can't touch others' bookings; role guards on transitions; 422 validation; cross-tenant assignment blocked; **concurrent slot booking (2 of 3 succeed, 409)**; **concurrent QC claim (first wins, 409)**; cancel returns reserved stock |
 | `e2e/owner.spec.ts` | owner signup → shop → team → service → second shop → switcher; staff scoping; deactivation revokes access |
 | `e2e/public.spec.ts` | directory search/filter, wizard availability, theme toggle persistence, no horizontal scroll at 375px, login redirects, per-role page access, notification bell |
+| `e2e/frontdesk.spec.ts` | bonus track: an unanswered customer call is **missed**; another shop's advisor can't answer it; the **AI Front Desk** answers the estimate (PKR 2,500) from the caller's own booking; another customer is **403**; hanging up creates a summary task; the advisor sees summary + transcript, **marks it done**, and finds the call on the booking's log; a technician can't open the inbox |
 
 ## Deployment (Vercel + Neon)
 
 1. Create a Neon project (pick a region near your users — e.g. Singapore for Pakistan) and copy the **pooled** and **direct** connection strings.
-2. Import the GitHub repo into Vercel. Set `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `AUTH_SESSION_DAYS`, `NEXT_PUBLIC_APP_URL`. Set the **Function Region** to the same region as the database (every workflow step is a transaction — keep the round trips short).
+2. Import the GitHub repo into Vercel. Set `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `AUTH_SESSION_DAYS`, `NEXT_PUBLIC_APP_URL` (and `GROQ_API_KEY` for the AI Front Desk). Set the **Function Region** to the same region as the database (every workflow step is a transaction — keep the round trips short).
 3. Build command: `prisma migrate deploy && next build` (or run `pnpm db:deploy` once from your machine).
 4. Seed once from your machine against the production database: `pnpm db:seed`.
 5. Smoke-test: `E2E_BASE_URL=https://<your-app>.vercel.app pnpm test:e2e`.
