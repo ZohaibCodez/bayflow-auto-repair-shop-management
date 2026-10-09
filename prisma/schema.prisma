@@ -61,6 +61,22 @@ enum PurchaseOrderStatus {
   RECEIVED
 }
 
+/// RESERVED: held for the booking (already out of qtyOnHand).
+/// ALLOCATED: handed to the technician (job entered IN_REPAIR).
+/// RELEASED: returned to stock (booking cancelled before IN_REPAIR).
+enum AllocationStatus {
+  RESERVED
+  ALLOCATED
+  RELEASED
+}
+
+enum StockMovementReason {
+  RECEIVE
+  RESERVE
+  RELEASE
+  ADJUST
+}
+
 // ---------------------------------------------------------------------------
 // Identity
 // ---------------------------------------------------------------------------
@@ -76,17 +92,18 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  ownedShops    Shop[]         @relation("ShopOwner")
-  memberships   Membership[]
-  vehicles      Vehicle[]
-  bookings      Booking[]      @relation("CustomerBookings")
-  techBookings  Booking[]      @relation("TechBookings")
-  partsBookings Booking[]      @relation("PartsBookings")
-  qcBookings    Booking[]      @relation("QcBookings")
-  notifications Notification[]
-  bookingEvents BookingEvent[]
-  estimates     Estimate[]
-  issues        Issue[]
+  ownedShops     Shop[]          @relation("ShopOwner")
+  memberships    Membership[]
+  vehicles       Vehicle[]
+  bookings       Booking[]       @relation("CustomerBookings")
+  techBookings   Booking[]       @relation("TechBookings")
+  partsBookings  Booking[]       @relation("PartsBookings")
+  qcBookings     Booking[]       @relation("QcBookings")
+  notifications  Notification[]
+  bookingEvents  BookingEvent[]
+  estimates      Estimate[]
+  issues         Issue[]
+  stockMovements StockMovement[]
 }
 
 // ---------------------------------------------------------------------------
@@ -103,6 +120,8 @@ model Shop {
   slotDurationMin Int      @default(60)
   slotCapacity    Int      @default(1)
   logoUrl         String?
+  description     String?
+  rating          Float? // display placeholder until reviews exist
   ownerId         String
   createdAt       DateTime @default(now())
 
@@ -113,6 +132,9 @@ model Shop {
   inventory      InventoryItem[]
   bookings       Booking[]
   purchaseOrders PurchaseOrder[]
+  stockMovements StockMovement[]
+  callLogs       CallLog[]
+  aiTasks        AiTask[]
 
   @@index([city])
   @@index([ownerId])
@@ -187,6 +209,7 @@ model Vehicle {
 
 model Booking {
   id             String        @id @default(cuid())
+  code           String        @unique // human booking reference, e.g. BF-7K2Q9M
   shopId         String
   customerId     String
   vehicleId      String
@@ -217,6 +240,7 @@ model Booking {
   notifications  Notification[]
   callLogs       CallLog[]
   aiTasks        AiTask[]
+  stockMovements StockMovement[]
 
   @@index([shopId, status])
   @@index([customerId])
@@ -244,14 +268,19 @@ model BookingEvent {
 // Estimates
 // ---------------------------------------------------------------------------
 
+/// One row per estimate version. A rejected estimate is kept; the revision gets a new row.
+/// `revision` also increments when the SA edits a draft before sending.
 model Estimate {
-  id          String         @id @default(cuid())
-  bookingId   String
-  revision    Int            @default(1)
-  laborCost   Int            @default(0)
-  status      EstimateStatus @default(DRAFT)
-  createdById String
-  createdAt   DateTime       @default(now())
+  id           String         @id @default(cuid())
+  bookingId    String
+  revision     Int            @default(1)
+  status       EstimateStatus @default(DRAFT)
+  createdById  String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  sentAt       DateTime?
+  respondedAt  DateTime? // when the customer accepted/rejected (the in-app timestamp)
+  customerNote String? // reason given on rejection
 
   booking   Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   createdBy User           @relation(fields: [createdById], references: [id])
@@ -261,14 +290,16 @@ model Estimate {
 }
 
 model EstimateItem {
-  id         String           @id @default(cuid())
-  estimateId String
-  kind       EstimateItemKind
-  name       String
-  qty        Int              @default(1)
-  unitCost   Int // whole PKR
+  id              String           @id @default(cuid())
+  estimateId      String
+  kind            EstimateItemKind
+  name            String
+  qty             Int              @default(1)
+  unitCost        Int // whole PKR
+  inventoryItemId String? // PART lines link to shop inventory so shortages are computed automatically
 
-  estimate Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  estimate      Estimate       @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem? @relation(fields: [inventoryItemId], references: [id])
 
   @@index([estimateId])
 }
@@ -286,9 +317,11 @@ model InventoryItem {
   reorderLevel Int    @default(0)
   unitCost     Int    @default(0) // whole PKR
 
-  shop        Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  poItems     POItem[]
-  allocations PartAllocation[]
+  shop           Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  poItems        POItem[]
+  allocations    PartAllocation[]
+  estimateItems  EstimateItem[]
+  stockMovements StockMovement[]
 
   @@unique([shopId, sku])
   @@index([shopId])
@@ -298,12 +331,15 @@ model PurchaseOrder {
   id        String              @id @default(cuid())
   shopId    String
   bookingId String?
+  supplier  String?
   status    PurchaseOrderStatus @default(ORDERED)
   createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
 
-  shop    Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  booking Booking? @relation(fields: [bookingId], references: [id])
-  items   POItem[]
+  shop           Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  booking        Booking?        @relation(fields: [bookingId], references: [id])
+  items          POItem[]
+  stockMovements StockMovement[]
 
   @@index([shopId])
   @@index([bookingId])
@@ -323,17 +359,43 @@ model POItem {
   @@index([poId])
 }
 
-/// Parts reserved/deducted for a booking. Released back to stock on cancellation.
+/// Parts held for a booking. Stock leaves qtyOnHand when RESERVED and returns on RELEASED.
 model PartAllocation {
-  id              String @id @default(cuid())
+  id              String           @id @default(cuid())
   bookingId       String
   inventoryItemId String
   qty             Int
+  status          AllocationStatus @default(RESERVED)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   booking       Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
 
+  @@unique([bookingId, inventoryItemId])
   @@index([bookingId])
+}
+
+/// Append-only stock ledger: every change to qtyOnHand writes one row.
+model StockMovement {
+  id              String              @id @default(cuid())
+  shopId          String
+  inventoryItemId String
+  bookingId       String?
+  poId            String?
+  delta           Int // + into stock, - out of stock
+  reason          StockMovementReason
+  actorId         String?
+  createdAt       DateTime            @default(now())
+
+  shop          Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem  @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  booking       Booking?       @relation(fields: [bookingId], references: [id])
+  po            PurchaseOrder? @relation(fields: [poId], references: [id])
+  actor         User?          @relation(fields: [actorId], references: [id])
+
+  @@index([shopId, createdAt])
+  @@index([inventoryItemId])
 }
 
 // ---------------------------------------------------------------------------
@@ -341,13 +403,14 @@ model PartAllocation {
 // ---------------------------------------------------------------------------
 
 model Issue {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   bookingId   String
   title       String
   description String?
   createdById String
-  resolved    Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  resolved    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  resolvedAt  DateTime?
 
   booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   createdBy User    @relation(fields: [createdById], references: [id])
@@ -365,6 +428,7 @@ model Notification {
   bookingId String?
   type      String
   message   String
+  href      String? // where clicking the notification takes the recipient
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 
@@ -378,26 +442,31 @@ model Notification {
 // Bonus: in-app calling + AI Front Desk (unused until Phase 7)
 // ---------------------------------------------------------------------------
 
+/// bookingId is optional: an unanswered call from an unidentified caller has no booking yet.
 model CallLog {
-  id         String   @id @default(cuid())
-  bookingId  String
-  direction  String // "SA_TO_CUSTOMER" | "CUSTOMER_TO_SA"
-  fromUserId String?
-  toUserId   String?
-  state      String // ringing | connected | ended | missed
-  startedAt  DateTime @default(now())
+  id          String   @id @default(cuid())
+  shopId      String
+  bookingId   String?
+  direction   String // "SA_TO_CUSTOMER" | "CUSTOMER_TO_SA"
+  fromUserId  String?
+  toUserId    String?
+  state       String // ringing | connected | ended | missed
+  startedAt   DateTime @default(now())
   durationSec Int?
-  outcome    String?
+  outcome     String?
 
-  booking Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  shop    Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   aiTask  AiTask?
 
+  @@index([shopId])
   @@index([bookingId])
 }
 
 model AiTask {
   id        String   @id @default(cuid())
-  bookingId String
+  shopId    String
+  bookingId String?
   callLogId String?  @unique
   summary   String
   intent    String?
@@ -405,8 +474,10 @@ model AiTask {
   done      Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  booking Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  shop    Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   callLog CallLog? @relation(fields: [callLogId], references: [id])
 
+  @@index([shopId, done])
   @@index([bookingId])
 }

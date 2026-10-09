@@ -11,6 +11,9 @@ export const prisma =
       process.env.NODE_ENV === "development"
         ? ["error", "warn"]
         : ["error"],
+    // Workflow steps run as interactive transactions. Against a remote Neon region each
+    // round trip can be ~200ms locally, so allow more than Prisma's 5s default.
+    transactionOptions: { maxWait: 10_000, timeout: 30_000 },
   });
 
 if (process.env.NODE_ENV !== "production") {
