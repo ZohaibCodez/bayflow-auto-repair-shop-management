@@ -65,6 +65,20 @@ pnpm db:seed          # demo shops, teams, services, inventory and demo bookings
 
 `pnpm db:seed` is **idempotent and doubles as "reset demo"**: it upserts the demo shops/users/services/inventory and re-creates the demo bookings of the seeded shops. Shops that users created themselves are never touched.
 
+#### Resetting to a pristine demo
+
+Testing — manual or Playwright — leaves residue behind: extra shops, extra accounts,
+half-finished bookings. To get back to exactly the five seeded shops:
+
+```bash
+pnpm db:clean         # dry run: prints what would be deleted, deletes nothing
+pnpm db:demo          # clean + seed, the one-command reset
+```
+
+`db:demo` deletes every shop that is not one of the five canonical `shop_*` ids and
+every account that is not a seeded demo account, then reseeds. Run it before any
+judging or demo session so the public directory shows five shops and nothing else.
+
 ### 4. Run
 
 ```bash

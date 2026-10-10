@@ -11,7 +11,7 @@
 **Status legend:** `☐ Todo` · `◐ Doing` · `☑ Done` · `⊘ Blocked`
 **Owners:** `Z` Zohaib · `T` Teammate · `AI` Claude · `—` unassigned
 
-**Current focus:** ▶ **Core + bonus are built and tested (unit + Playwright E2E). What's left is submission: deploy to Vercel (P0-5), make the GitHub repo public (P0-6), live smoke test (P6-5), rotate secrets (H-2), record the demo video (P7-5).**
+**Current focus:** ▶ **Core + bonus are built and tested (unit + Playwright E2E), demo data is clean and resettable (`pnpm db:demo`). What's left is submission: deploy to Vercel (P0-5), make the GitHub repo public (P0-6), live smoke test (P6-5), rotate secrets (H-2), record the demo video (P7-5). A manual QA pass against the brief is scripted in [docs/QA-MANUAL.md](docs/QA-MANUAL.md).**
 **Last updated:** 2026-10-10 (by AI)
 
 ---
@@ -113,12 +113,14 @@
 
 | ID | Task | Owner | Status | Notes |
 |---|---|---|---|---|
-| H-1 | Delete the 3 duplicate shops from the old (non-idempotent) seed | Z | ☐ | they have no bookings; see the command in the session notes / ask Claude |
+| H-1 | Delete the duplicate shops from the old (non-idempotent) seed | AI | ☑ | done 2026-10-10 — was worse than 3: **16** junk shops (6 cuid duplicates incl. two "Lahore Auto Care", 10 Playwright leftovers) + 18 E2E users. Added `prisma/clean-demo.ts` + `pnpm db:clean` (dry run) / `pnpm db:demo` (clean + seed). DB verified back to 5 shops / 26 users / 6 bookings |
 | H-2 | Rotate the Neon password + `AUTH_SECRET` (and the Groq key) before the repo goes public | Z | ☐ | all were shared in chat; they live only in the git-ignored `.env` / `docs/Requirement.txt` — never committed (history checked 2026-10-10) |
 
 ---
 
 ## Activity Log  (newest first — append dated lines here for the record)
+
+- **2026-10-10 (AI):** Brand assets + demo-data reset. Wired the new logo PNGs into `components/brand/logo.tsx` with a CSS `dark:` swap (not `useTheme()`, which flashes the wrong mark on load) and built `favicon.ico` (3-frame 16/32/48) + `apple-icon.png` from the supplied plates. Two defects in the source files: `logo-light`/`favicon-bright` had **no alpha channel** — 61% / 71% of their pixels were baked white, which renders a white box on `surface-2` — and all four were 0.9–1.5 MB for assets shown at 32px and 16px. Keyed white to transparency with a soft ramp, trimmed both marks onto an identical 128² canvas so they swap with zero jitter, 1.1 MB → 23 KB. First ICO shipped RGB frames and 500'd every page (Next's decoder demands RGBA); fixed, and the build now asserts colour type 6 per frame. Originals moved to `docs/brand/` (versioned, not served). **H-1 done:** the demo DB had 18 shops — 6 cuid duplicates from an old seed (including *two* "Lahore Auto Care", the shop the brief's worked example names) and 10 Playwright leftovers, plus 18 E2E users; 16 of 21 Lahore bookings were `E2E-*` Toyota Yaris junk. Added `prisma/clean-demo.ts` deriving the canonical account list from the seed's own slug/role constants, with `pnpm db:clean` (dry run) and `pnpm db:demo` (clean + seed). Verified back to 5 shops / 26 users / 6 bookings. Wrote `docs/QA-MANUAL.md` — 176 numbered manual tests mapped to the brief, covering all 15 statuses, both required loops, all 8 notification events, 11 tenant-isolation probes and the bonus track. ⚠ The two marks are different colours (amber light / teal dark) and `globals.css` reserves teal for ready-complete states — flagged, not changed.
 
 - **2026-10-10 (AI):** Bonus track finished against brief §8. The AI Front Desk now runs on **Groq** (`openai/gpt-oss-120b`, OpenAI-compatible tool calling; key in `.env` only) with Claude and the rule-based agent as fallbacks; summaries use a strict JSON schema and are zod-checked. Built the missing **SA section** `/pos/[shop]/calls` — AI follow-ups (summary, intent, sentiment, transcript, **Mark done**), recently done, shop call log — plus the call log on each job page and a "Calls & AI" sidebar badge (the AI_TASK notification already linked to this URL, which was a 404). New `e2e/frontdesk.spec.ts` (5/5): missed call → AI answers PKR 2,500 from the caller's booking → other customer 403 / other shop blocked → task → advisor marks done; technician locked out. Optional TURN relay env vars. `.env.example` + README now document the bonus and the variables actually read. UI: sign-in screen redesigned to one viewport with an isometric night-city SVG scene; hero gets a looping workshop video (photo fallback until it plays); hero stage strip and the "How a repair flows" car lane no longer fall off the bottom on short screens (verified 570–1080px tall). Fixed `e2e/public.spec.ts` for the new two-button theme switch.
 
