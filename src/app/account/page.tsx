@@ -12,7 +12,6 @@ import { estimateTotal } from "@/components/booking/estimate-view";
 import { FallbackImage } from "@/components/fallback-image";
 import { IMAGES } from "@/lib/images";
 import { COVER_FALLBACK } from "@/components/marketing/shop-card";
-import { Odometer } from "@/components/number-reel";
 import { NeedsYouCard } from "@/components/account/needs-you-card";
 import { ActiveBookingCard } from "@/components/account/active-booking-card";
 
@@ -43,14 +42,9 @@ export default async function AccountPage() {
               Hi {user.name.split(" ")[0]}
             </h1>
             <p className="mt-2 text-muted-foreground">
-              {active.length ? (
-                <>
-                  You have <Odometer value={active.length} /> car
-                  {active.length === 1 ? "" : "s"} in the shop.
-                </>
-              ) : (
-                "No cars in the shop right now."
-              )}
+              {active.length
+                ? `You have ${active.length} car${active.length === 1 ? "" : "s"} in the shop.`
+                : "No cars in the shop right now."}
             </p>
           </div>
           <Button render={<Link href="/#shops" />} className="sheen h-10 px-4">
