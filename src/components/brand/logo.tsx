@@ -1,8 +1,16 @@
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 /**
- * BayFlow mark: a service-bay gauge — an arc sweeping to a lit amber needle,
- * framed like a bay. The wordmark is set in expanded Archivo.
+ * BayFlow mark + wordmark.
+ *
+ * The mark ships as two PNGs — amber-on-light, teal-on-dark — and we render BOTH,
+ * letting CSS hide one (`dark:` resolves to `.dark *`, set on <html> by next-themes
+ * before paint). Choosing the file from `useTheme()` instead would mean the server
+ * can't know which to send, so the wrong mark paints for a frame on every load.
+ *
+ * Both <Image>s are decorative; the accessible name comes from the wordmark, which
+ * falls back to an sr-only label so the lockup is never announced as unnamed.
  */
 export function Logo({
   className,
@@ -13,31 +21,31 @@ export function Logo({
 }) {
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
-      <span className="grid size-8 place-items-center rounded-md bg-surface-2 ring-1 ring-line">
-        <svg viewBox="0 0 24 24" fill="none" className="size-5" aria-hidden="true">
-          {/* gauge arc */}
-          <path
-            d="M4 16a8 8 0 1 1 16 0"
-            stroke="currentColor"
-            className="text-steel/50"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-          />
-          {/* needle to the amber mark */}
-          <path
-            d="M12 16 16.5 9.5"
-            stroke="var(--amber)"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-          <circle cx="12" cy="16" r="1.7" fill="var(--amber)" />
-        </svg>
+      <Image
+        src="/brand/logo-light.png"
+        alt=""
+        aria-hidden
+        width={128}
+        height={128}
+        loading="eager"
+        className="size-8 shrink-0 dark:hidden"
+      />
+      <Image
+        src="/brand/logo-dark.png"
+        alt=""
+        aria-hidden
+        width={128}
+        height={128}
+        loading="eager"
+        className="hidden size-8 shrink-0 dark:block"
+      />
+      <span
+        className={
+          showWordmark ? "font-display-md text-[1.15rem] text-foreground" : "sr-only"
+        }
+      >
+        BayFlow
       </span>
-      {showWordmark && (
-        <span className="font-display-md text-[1.15rem] text-foreground">
-          BayFlow
-        </span>
-      )}
     </span>
   );
 }
