@@ -58,6 +58,7 @@ Built for **LoopVerse 3.0 — Web Dev (Virtual)**
   <img alt="Vitest" src="https://img.shields.io/badge/tested_with-Vitest-6E9F18?logo=vitest&logoColor=white" />
   <img alt="Playwright" src="https://img.shields.io/badge/e2e-Playwright-2EAD33?logo=playwright&logoColor=white" />
   <img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/ZohaibCodez/bayflow-auto-repair-shop-management" />
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg" /></a>
   <img alt="Hackathon" src="https://img.shields.io/badge/LoopVerse-3.0-ff6a00" />
 </p>
 
@@ -88,6 +89,7 @@ Built for **LoopVerse 3.0 — Web Dev (Virtual)**
 - [Deployment](#-deployment-vercel--neon)
 - [Judging criteria coverage](#-judging-criteria-coverage)
 - [Project docs](#-project-docs)
+- [License](#-license)
 
 ---
 
@@ -515,6 +517,10 @@ Mapped against the brief's own weighting, so a reviewer can jump straight to the
 - **[TRACKER.md](TRACKER.md)** — task board and activity log.
 - **[docs/QA-MANUAL.md](docs/QA-MANUAL.md)** — a 176-step manual test pass mapped to the brief, section by section.
 - `docs/Web Dev - Virtual.pdf` — the hackathon brief.
+
+## 📄 License
+
+MIT — see **[LICENSE](LICENSE)**.
 
 ---
 
