@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { ShieldAlert } from "lucide-react";
 import { PHASES, STATUS_META, TONE_CLASS, statusLabel } from "@/lib/booking/status-meta";
@@ -37,6 +38,31 @@ export function FloorBoard({ cars }: { cars: FloorCar[] }) {
     cars.filter((c) => STATUS_META[c.status].phase === phase),
   );
   const busiest = Math.max(1, ...byPhase.map((p) => p.length));
+
+  // ---- Arrival flash --------------------------------------------------
+  // Which cars moved bays *since the previous render* (a live refresh picked
+  // up someone else's action). A car that changes bay is unmounted from its
+  // old <ul> and mounted into a new one — layoutId still carries it smoothly
+  // across that move, but the component instance is fresh, so "did this car
+  // just arrive" has to be decided up here, not inside <Car>.
+  //
+  // Derived from props during render (React's documented pattern for
+  // "adjusting state when a prop changes"), not a ref: reading a ref's
+  // current value during render is unsafe once renders can be retried, and
+  // the server hands this component a fresh `cars` array on every poll, so
+  // the identity check below fires exactly once per real refresh.
+  const [prevCars, setPrevCars] = useState(cars);
+  const [justArrived, setJustArrived] = useState<ReadonlySet<string>>(() => new Set());
+  if (cars !== prevCars) {
+    const prevStatusById = new Map(prevCars.map((c) => [c.id, c.status]));
+    const moved = new Set<string>();
+    for (const c of cars) {
+      const was = prevStatusById.get(c.id);
+      if (was !== undefined && was !== c.status) moved.add(c.id);
+    }
+    setJustArrived(moved);
+    setPrevCars(cars);
+  }
 
   return (
     <LayoutGroup id="floor">
@@ -88,7 +114,12 @@ export function FloorBoard({ cars }: { cars: FloorCar[] }) {
                 <ul className="space-y-2">
                   <AnimatePresence initial={false} mode="popLayout">
                     {here.map((car) => (
-                      <Car key={car.id} car={car} reduce={Boolean(reduce)} />
+                      <Car
+                        key={car.id}
+                        car={car}
+                        reduce={Boolean(reduce)}
+                        justArrived={justArrived.has(car.id)}
+                      />
                     ))}
                   </AnimatePresence>
                   {here.length === 0 && (
@@ -107,7 +138,15 @@ export function FloorBoard({ cars }: { cars: FloorCar[] }) {
   );
 }
 
-function Car({ car, reduce }: { car: FloorCar; reduce: boolean }) {
+function Car({
+  car,
+  reduce,
+  justArrived,
+}: {
+  car: FloorCar;
+  reduce: boolean;
+  justArrived: boolean;
+}) {
   const tone = TONE_CLASS[STATUS_META[car.status].tone];
   return (
     <motion.li
@@ -127,6 +166,21 @@ function Car({ car, reduce }: { car: FloorCar; reduce: boolean }) {
           car.stalled ? "border-amber/50" : "border-line hover:border-steel/40",
         )}
       >
+        {/* A hand-off reads as a beat of light: this bay just received the
+            job, so a ring blooms from the stage colour and fades. Driven by
+            FloorBoard comparing this render to the last — never fires on the
+            first paint, only when a live refresh moves a car. */}
+        {justArrived && !reduce && (
+          <motion.span
+            aria-hidden
+            className={cn("pointer-events-none absolute -inset-px rounded-lg", tone.text)}
+            initial={{ opacity: 0.6 }}
+            animate={{ opacity: 0 }}
+            transition={{ duration: 1.1, ease: "easeOut" }}
+            style={{ boxShadow: "0 0 0 1.5px currentColor, 0 0 18px 1px currentColor" }}
+          />
+        )}
+
         {/* Which stage, as a colour, without spending a line of text on it. */}
         <span className={cn("absolute inset-y-0 left-0 w-0.5", tone.dot)} aria-hidden />
 

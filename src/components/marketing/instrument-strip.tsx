@@ -8,60 +8,11 @@ import {
   useMotionTemplate,
   useMotionValue,
   useReducedMotion,
-  useTransform,
 } from "motion/react";
 import { trackPointer } from "@/lib/pointer";
+import { Odometer } from "@/components/number-reel";
 
 export type Readout = { label: string; value: number; note: string };
-
-const REEL = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-
-/**
- * One digit on a reel. The strip is twice as tall as the numbers it shows, so
- * every digit spins a full revolution before it lands — a mileage counter
- * rolling over, which is the one counter every driver already knows.
- */
-function Reel({ digit, order, active }: { digit: number; order: number; active: boolean }) {
-  const reduce = useReducedMotion();
-  const pos = useMotionValue(reduce ? 10 + digit : 0);
-  // 20 cells tall, so one cell is 5% of the strip.
-  const y = useTransform(pos, (v) => `${-v * 5}%`);
-
-  useEffect(() => {
-    if (!active || reduce) return;
-    const controls = animate(pos, 10 + digit, {
-      duration: 1.05 + order * 0.16, // digits to the left settle first
-      ease: [0.16, 1, 0.3, 1],
-    });
-    return () => controls.stop();
-  }, [active, digit, order, pos, reduce]);
-
-  return (
-    <span className="relative inline-block h-[1em] w-[1ch] overflow-hidden align-bottom">
-      <motion.span className="absolute inset-x-0 top-0 flex flex-col" style={{ y }}>
-        {REEL.map((n, i) => (
-          <span key={i} className="h-[1em] leading-none">
-            {n}
-          </span>
-        ))}
-      </motion.span>
-    </span>
-  );
-}
-
-function Odometer({ value, active }: { value: number; active: boolean }) {
-  const digits = [...String(value)];
-  return (
-    <>
-      <span className="sr-only">{value}</span>
-      <span aria-hidden className="readout inline-flex leading-none">
-        {digits.map((d, i) => (
-          <Reel key={i} digit={Number(d)} order={i} active={active} />
-        ))}
-      </span>
-    </>
-  );
-}
 
 /**
  * Live shop telemetry, built like the instrument cluster it describes rather

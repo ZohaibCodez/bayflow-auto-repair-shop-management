@@ -1,8 +1,17 @@
 import Link from "next/link";
-import { ArrowRight, EyeOff, PartyPopper } from "lucide-react";
+import {
+  ArrowRight,
+  Boxes,
+  CalendarCheck,
+  EyeOff,
+  Headset,
+  PartyPopper,
+  ShieldCheck,
+  ShoppingCart,
+} from "lucide-react";
 import { prisma } from "@/lib/db";
 import { guard } from "@/lib/page-guard";
-import { hasShopRole, requireShopAccess } from "@/lib/rbac";
+import { hasShopRole, requireShopAccess, type ShopAccess } from "@/lib/rbac";
 import { formatDateTime, formatElapsed, formatLongDay, formatTime } from "@/lib/time";
 import { formatPKR } from "@/lib/money";
 import { STATUS_META } from "@/lib/booking/status-meta";
@@ -14,7 +23,9 @@ import { Attention, type AttentionItem } from "@/components/pos/attention";
 import { FloorBoard, type FloorCar } from "@/components/pos/floor-board";
 import { MetricBand, type Metric } from "@/components/pos/metric-band";
 import { NextUp, type NextUpItem } from "@/components/pos/next-up";
+import { QuickActions, type QuickAction } from "@/components/pos/quick-actions";
 import { ShopClock } from "@/components/pos/shop-clock";
+import { Odometer } from "@/components/number-reel";
 
 /** How many jobs the queue shows before it points at the full list. */
 const QUEUE_SHOWN = 5;
@@ -37,9 +48,23 @@ export default async function PosHome({ params, searchParams }: PageProps<"/pos/
   const href = (id: string) => `/pos/${shopId}/bookings/${id}`;
   const now = new Date();
 
-  const [rows, listed] = await Promise.all([
+  const canSeeParts = hasShopRole(access, ["OWNER", "PARTS"]);
+  const canSeeCalls = hasShopRole(access, ["OWNER", "SERVICE_ADVISOR"]);
+
+  const [rows, listed, lowStockCount, openPOCount, openTaskCount] = await Promise.all([
     listShopBookings(shopId, actor, { take: 300 }),
     access.isOwner ? isShopListed(shopId) : Promise.resolve(true),
+    canSeeParts
+      ? prisma.inventoryItem
+          .findMany({ where: { shopId }, select: { qtyOnHand: true, reorderLevel: true } })
+          .then((rows) => rows.filter((i) => i.qtyOnHand <= i.reorderLevel).length)
+      : Promise.resolve(0),
+    canSeeParts
+      ? prisma.purchaseOrder.count({ where: { shopId, status: { not: "RECEIVED" } } })
+      : Promise.resolve(0),
+    canSeeCalls
+      ? prisma.aiTask.count({ where: { shopId, done: false } })
+      : Promise.resolve(0),
   ]);
 
   const live = rows.filter((b) => b.status !== "COMPLETED" && b.status !== "CANCELLED");
@@ -52,9 +77,18 @@ export default async function PosHome({ params, searchParams }: PageProps<"/pos/
 
   // ---- The headline is the answer, not a greeting -------------------------
   const waiting = queue.length;
-  const headline = waiting
-    ? `${waiting} job${waiting === 1 ? "" : "s"} need${waiting === 1 ? "s" : ""} you`
-    : "You're all clear";
+  const headlineTail = waiting
+    ? ` job${waiting === 1 ? "" : "s"} need${waiting === 1 ? "s" : ""} you`
+    : null;
+  const qcPendingCount = rows.filter((b) => b.status === "QC_PENDING").length;
+
+  const actions = quickActionsFor(shopId, access, {
+    queueCount: waiting,
+    qcPendingCount,
+    lowStockCount,
+    openPOCount,
+    openTaskCount,
+  });
 
   const cars: FloorCar[] = live.map((b) => ({
     id: b.id,
@@ -134,10 +168,25 @@ export default async function PosHome({ params, searchParams }: PageProps<"/pos/
       )}
 
       {/* ---- Command line -------------------------------------------------
-          What needs doing, then where you are and what time it is there. */}
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          What needs doing, then where you are and what time it is there.
+          The count rolls in on an odometer reel — the same instrument the
+          landing page's live strip uses — rather than just appearing, so
+          the one number that matters most on the page reads as live data. */}
+      <header
+        className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
+        style={{ animation: "hero-in .5s cubic-bezier(.16,1,.3,1) backwards" }}
+      >
         <div className="min-w-0">
-          <h1 className="font-display text-3xl text-foreground sm:text-4xl">{headline}</h1>
+          <h1 className="font-display text-3xl text-foreground sm:text-4xl">
+            {waiting ? (
+              <>
+                <Odometer value={waiting} />
+                {headlineTail}
+              </>
+            ) : (
+              "You're all clear"
+            )}
+          </h1>
           <p className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-muted-foreground">
             <span>
               {greeting()}, {firstName}
@@ -157,21 +206,32 @@ export default async function PosHome({ params, searchParams }: PageProps<"/pos/
         </Link>
       </header>
 
-      <NextUp
-        items={queueItems}
-        total={queue.length}
-        allHref={`/pos/${shopId}/bookings`}
-        emptyHint={
-          live.length
-            ? `${live.length} car${live.length === 1 ? "" : "s"} still in the shop — they're waiting on somebody else.`
-            : "No cars in the shop right now."
-        }
-      />
+      {actions.length > 1 && (
+        <div style={{ animation: "hero-in .5s cubic-bezier(.16,1,.3,1) 60ms backwards" }}>
+          <QuickActions actions={actions} />
+        </div>
+      )}
+
+      <div style={{ animation: "hero-in .5s cubic-bezier(.16,1,.3,1) 110ms backwards" }}>
+        <NextUp
+          items={queueItems}
+          total={queue.length}
+          allHref={`/pos/${shopId}/bookings`}
+          emptyHint={
+            live.length
+              ? `${live.length} car${live.length === 1 ? "" : "s"} still in the shop — they're waiting on somebody else.`
+              : "No cars in the shop right now."
+          }
+        />
+      </div>
 
       {/* ---- The floor ---------------------------------------------------
           Every live car in the bay it is standing in. A job that changes
           status travels across the board on the next refresh. */}
-      <section className="space-y-3">
+      <section
+        className="space-y-3"
+        style={{ animation: "hero-in .5s cubic-bezier(.16,1,.3,1) 160ms backwards" }}
+      >
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="font-display-md text-base text-foreground">
             {onlyTechnician ? "Your cars" : "The floor"}
@@ -191,15 +251,90 @@ export default async function PosHome({ params, searchParams }: PageProps<"/pos/
         )}
       </section>
 
-      {access.isOwner && <OwnerNumbers shopId={shopId} live={live} />}
+      {access.isOwner && (
+        <div style={{ animation: "hero-in .5s cubic-bezier(.16,1,.3,1) 210ms backwards" }}>
+          <OwnerNumbers shopId={shopId} live={live} />
+        </div>
+      )}
 
-      <ShopAttention
-        shopId={shopId}
-        rows={rows}
-        canSeeStock={hasShopRole(access, ["OWNER", "PARTS"])}
-      />
+      <div style={{ animation: "hero-in .5s cubic-bezier(.16,1,.3,1) 260ms backwards" }}>
+        <ShopAttention
+          shopId={shopId}
+          rows={rows}
+          canSeeStock={hasShopRole(access, ["OWNER", "PARTS"])}
+        />
+      </div>
     </div>
   );
+}
+
+/** The real next moves for this role — only routes the viewer can actually open. */
+function quickActionsFor(
+  shopId: string,
+  access: ShopAccess,
+  counts: {
+    queueCount: number;
+    qcPendingCount: number;
+    lowStockCount: number;
+    openPOCount: number;
+    openTaskCount: number;
+  },
+): QuickAction[] {
+  const base = `/pos/${shopId}`;
+  const actions: QuickAction[] = [];
+  const isTechOnly =
+    hasShopRole(access, ["TECHNICIAN"]) &&
+    !access.isOwner &&
+    !hasShopRole(access, ["SERVICE_ADVISOR", "PARTS", "QC"]);
+
+  actions.push({
+    href: `${base}/bookings`,
+    label: isTechOnly ? "My jobs" : "Bookings",
+    hint: counts.queueCount ? `${counts.queueCount} waiting on you` : "All caught up",
+    icon: <CalendarCheck />,
+    badge: counts.queueCount,
+  });
+
+  if (hasShopRole(access, ["OWNER", "QC"])) {
+    actions.push({
+      href: `${base}/qc`,
+      label: "QC queue",
+      hint: counts.qcPendingCount ? `${counts.qcPendingCount} waiting` : "Queue is clear",
+      icon: <ShieldCheck />,
+      badge: counts.qcPendingCount,
+    });
+  }
+
+  if (hasShopRole(access, ["OWNER", "PARTS"])) {
+    actions.push({
+      href: `${base}/inventory`,
+      label: "Inventory",
+      hint: counts.lowStockCount
+        ? `${counts.lowStockCount} at reorder level`
+        : "Stock levels are fine",
+      icon: <Boxes />,
+      badge: counts.lowStockCount,
+    });
+    actions.push({
+      href: `${base}/purchase-orders`,
+      label: "Purchase orders",
+      hint: counts.openPOCount ? `${counts.openPOCount} open` : "Nothing on order",
+      icon: <ShoppingCart />,
+      badge: counts.openPOCount,
+    });
+  }
+
+  if (hasShopRole(access, ["OWNER", "SERVICE_ADVISOR"])) {
+    actions.push({
+      href: `${base}/calls`,
+      label: "Calls & AI",
+      hint: counts.openTaskCount ? `${counts.openTaskCount} follow-up` : "No open follow-ups",
+      icon: <Headset />,
+      badge: counts.openTaskCount,
+    });
+  }
+
+  return actions;
 }
 
 /** Sitting on a person (not the customer) for longer than the stall threshold. */
@@ -253,15 +388,29 @@ async function OwnerNumbers({ shopId, live }: { shopId: string; live: BookingRow
   const qcRuns = qcFails + qcPasses;
   const lowStock = inventory.filter((i) => i.qtyOnHand <= i.reorderLevel).length;
 
+  const stockValue = inventory.reduce((sum, i) => sum + i.qtyOnHand * i.unitCost, 0);
+  const qcPassPct = qcRuns ? Math.round((qcPasses / qcRuns) * 100) : null;
+  const turnaroundUnit: "hours" | "days" | null =
+    turnaroundH == null ? null : turnaroundH < 48 ? "hours" : "days";
+
+  // `raw` + `unit` play the figure back as a count-up instead of a jump cut —
+  // `unit` must format `raw` to exactly `value` (MetricBand owns the actual
+  // formatter, since a function can't be passed to a Client Component as a
+  // prop), so the animation can never show a number this tile doesn't also
+  // state statically.
   const metrics: Metric[] = [
     {
       label: "Work in the pipeline",
       value: formatPKR(pipeline),
+      raw: pipeline,
+      unit: "pkr",
       hint: `${live.length} active job${live.length === 1 ? "" : "s"}`,
     },
     {
       label: "Revenue collected",
       value: formatPKR(revenue),
+      raw: revenue,
+      unit: "pkr",
       tone: "teal",
       hint: `${completed.length} job${completed.length === 1 ? "" : "s"} completed`,
     },
@@ -273,17 +422,23 @@ async function OwnerNumbers({ shopId, live }: { shopId: string; live: BookingRow
           : turnaroundH < 48
             ? `${turnaroundH.toFixed(1)} h`
             : `${(turnaroundH / 24).toFixed(1)} d`,
+      raw: turnaroundH == null ? undefined : turnaroundUnit === "hours" ? turnaroundH : turnaroundH / 24,
+      unit: turnaroundUnit ?? undefined,
       hint: "Booked to collected",
     },
     {
       label: "QC pass rate",
-      value: qcRuns ? `${Math.round((qcPasses / qcRuns) * 100)}%` : "—",
+      value: qcPassPct == null ? "—" : `${qcPassPct}%`,
+      raw: qcPassPct ?? undefined,
+      unit: qcPassPct == null ? undefined : "percent",
       tone: qcRuns && qcFails / qcRuns > 0.3 ? "red" : "default",
       hint: `${qcFails} fail${qcFails === 1 ? "" : "s"} of ${qcRuns} check${qcRuns === 1 ? "" : "s"}`,
     },
     {
       label: "Stock on the shelf",
-      value: formatPKR(inventory.reduce((sum, i) => sum + i.qtyOnHand * i.unitCost, 0)),
+      value: formatPKR(stockValue),
+      raw: stockValue,
+      unit: "pkr",
       hint: `${inventory.length} part${inventory.length === 1 ? "" : "s"}, ${lowStock} at reorder level`,
       tone: lowStock ? "amber" : "default",
     },
