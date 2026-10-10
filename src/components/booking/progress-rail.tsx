@@ -31,7 +31,7 @@ export function ProgressRail({
                 : i < current
                   ? "bg-steel/60"
                   : i === current
-                    ? tone.dot
+                    ? cn(tone.dot, "rail-glow")
                     : "bg-line",
             )}
           />
@@ -50,7 +50,7 @@ export function ProgressRail({
             <div
               className={cn(
                 "h-1.5 rounded-full",
-                done ? "bg-steel/60" : active ? tone.dot : "bg-line",
+                done ? "bg-steel/60" : active ? cn(tone.dot, "rail-glow") : "bg-line",
               )}
             />
             <div className="mt-2 flex items-center gap-1">

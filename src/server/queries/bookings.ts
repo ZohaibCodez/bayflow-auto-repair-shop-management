@@ -118,7 +118,7 @@ export async function getCustomerBookings(customerId: string) {
   return prisma.booking.findMany({
     where: { customerId },
     include: {
-      shop: { select: { id: true, name: true, city: true } },
+      shop: { select: { id: true, name: true, city: true, coverImage: true } },
       vehicle: { select: { plate: true, make: true, model: true, year: true } },
       slot: { select: { startsAt: true } },
       estimates: {

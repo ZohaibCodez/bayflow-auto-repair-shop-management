@@ -263,6 +263,25 @@
   .tabular {
     font-variant-numeric: tabular-nums;
   }
+  /* A light sweeping across the "you are here" segment of a progress rail —
+     the job isn't just at this stage, it's actively being worked right now. */
+  .rail-glow {
+    position: relative;
+    overflow: hidden;
+  }
+  .rail-glow::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklab, #fff 60%, transparent),
+      transparent
+    );
+    transform: translateX(-100%);
+    animation: rail-sweep 2.4s ease-in-out infinite;
+  }
 }
 
 @keyframes bay-pulse {
@@ -273,6 +292,12 @@
   100% {
     transform: scale(1.9);
     opacity: 0;
+  }
+}
+
+@keyframes rail-sweep {
+  to {
+    transform: translateX(100%);
   }
 }
 
