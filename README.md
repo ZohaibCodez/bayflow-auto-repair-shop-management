@@ -1,7 +1,7 @@
 <!-- SEO Meta Tags
 Description: BayFlow is a multi-tenant auto repair shop management platform — a customer booking portal, a role-based shop POS and a backend booking state machine, built for LoopVerse 3.0.
 Keywords: auto repair shop management, multi-tenant SaaS, Next.js 16, booking state machine, role-based access control, Prisma, PostgreSQL, Auth.js, hackathon project, WebRTC calling, AI front desk
-author: Muhammad Zohaib Khan
+author: Muhammad Zohaib Khan, Muhammad Obaid ur Rehman
 canonical: https://github.com/ZohaibCodez/bayflow-auto-repair-shop-management
 -->
 
